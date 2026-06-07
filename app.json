@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "AppCamiones",
+    "slug": "appcamiones",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      "expo-font"
+    ],
+    "android": {
+      "package": "com.hector.appcamiones",
+      "permissions": [
+        "android.permission.VIBRATE"
+      ]
+    }
+  }
+}
