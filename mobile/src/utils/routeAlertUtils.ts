@@ -73,7 +73,7 @@ export const datosCamiones: Camion[] = [
     latitud: 18.4200,
     longitud: -70.0300,
     velocidad: 92, // Genera alerta automática
-    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split("T")[0],
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
   },
   {
     id: "2",
@@ -199,7 +199,7 @@ export const datosCamiones: Camion[] = [
     latitud: 18.4165,
     longitud: -70.0295,
     velocidad: 30,
-    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split("T")[0],
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
   },
 
   // --- OTROS DUEÑOS ---
@@ -215,7 +215,7 @@ export const datosCamiones: Camion[] = [
     latitud: 18.4180,
     longitud: -70.0150,
     velocidad: 72,
-    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split("T")[0],
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
   },
   {
     id: "12",

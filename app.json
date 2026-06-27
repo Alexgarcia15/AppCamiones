@@ -1,6 +1,7 @@
 {
   "expo": {
-    "name": "AppCamionesNueva",
+    "name": "AppCamiones",
+    "description": "",
     "slug": "appcamiones-nueva",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
@@ -14,7 +15,7 @@
     ],
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0f172a"
     },
     "plugins": [
       "expo-font"

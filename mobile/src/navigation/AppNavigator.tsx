@@ -26,7 +26,6 @@ const MyTheme = {
   },
 };
 
-// 1. ZONA PÚBLICA: Se ve SÓLO la primera vez para registrar el código del dueño
 function AuthStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -37,10 +36,10 @@ function AuthStack() {
   );
 }
 
-// 2. ZONA PRIVADA: Entra DIRECTO aquí con un solo toque si ya está el código guardado
 function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen
         name="Dashboard"
         component={DashboardScreen}
@@ -60,7 +59,6 @@ function AppStack() {
 export default function AppNavigator() {
   const { user, loading } = useAuth();
 
-  // Mientras la app lee la memoria del celular, mostramos una pantalla de carga limpia
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -71,7 +69,6 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer theme={MyTheme} ref={navigationRef}>
-      {/* Si ya hay un dueño registrado en la memoria, va directo a sus camiones. Si no, pide el código */}
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
