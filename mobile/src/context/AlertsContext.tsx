@@ -15,17 +15,16 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeAlert, setActiveAlert] = useState<any>(null);
   const [soundInstance, setSoundInstance] = useState<Audio.Sound | null>(null);
 
-  // Inicializar Audio
+  // Inicializar Audio con el formato moderno de Expo
   useEffect(() => {
     const initAudio = async () => {
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          interruptionHandlingIOS: Audio.INTERRUPTION_MODE_IOS_DO_NOT_MIX,
-          playsInSilentModeIOS: true,
-          shouldDuckAndroid: false,
-          playThroughEarpiece: false,
-        });
+      await Audio.setAudioModeAsync({
+  playsInSilentModeIOS: true,
+  staysActiveInBackground: true,
+  playThroughEarpieceAndroid: false, // 🟢 CAMBIADO: 'shouldRouteThrough...' ahora se llama así
+});
+
       } catch (error) {
         console.log("Error inicializando audio:", error);
       }
@@ -33,12 +32,12 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     initAudio();
   }, []);
 
-  // Función para reproducir la sirena
+  // Función para reproducir la sirena o los pitidos de emergencia
   async function playAlarmSound(isInfinite: boolean, durationMs?: number, alertType?: string) {
     try {
       // Descargar sonido anterior si existe
       if (soundInstance) {
-        await soundInstance.unloadAsync();
+        await soundInstance.unloadAsync().catch(() => {});
       }
 
       // Reproducir vibración inmediatamente como feedback
@@ -84,7 +83,6 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         try {
           if (isInfinite) {
-            // Bucle infinito
             await sound.setIsLoopingAsync(true);
           }
           await sound.playAsync();
@@ -93,22 +91,23 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           console.log("⚠️ Error reproduciendo sonido:", playError);
         }
 
-        // Si tiene una duración fija
+        // Si tiene una duración fija (alerta temporal)
         if (!isInfinite && durationMs) {
           setTimeout(async () => {
             try {
-              await sound.stopAsync();
-              await sound.unloadAsync();
-              setSoundInstance(null);
+              if (sound) {
+                await sound.stopAsync().catch(() => {});
+                await sound.unloadAsync().catch(() => {});
+                setSoundInstance(null);
+              }
             } catch (stopError) {
-              console.log("⚠️ Error deteniendo sonido:", stopError);
+              console.log("⚠️ Error deteniendo sonido programado:", stopError);
             }
           }, durationMs);
         }
       }
     } catch (error) {
       console.log("❌ Error general con sonido/vibración:", error);
-      // Fallback: Solo vibración
       try {
         Vibration.vibrate([0, 100, 50, 100]);
         console.log("✓ Vibración fallback ejecutada");
@@ -118,7 +117,8 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
-  const triggerAlert = (type: string, kmFaltantes?: number) => {
+  // Se tipó la entrada estrictamente para cumplir con AlertContextType
+  const triggerAlert = (type: 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion', kmFaltantes?: number) => {
     let message = "";
     let infinite = false;
     let duration = 0;
@@ -158,7 +158,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     
     setActiveAlert({ type, message, infinite });
     
-    // Ejecutar vibración inmediatamente de forma sincrónica
+    // Ejecutar vibración de forma segura
     const vibrationPattern = type === 'velocidad' || type === 'ruta' 
       ? [0, 100, 100, 100, 100, 100]
       : [0, 50, 100, 50];
@@ -170,15 +170,15 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log("✗ Error en vibración:", e);
     }
     
-    // Ejecutar sonido de forma asincrónica
+    // Lanzar sonido
     playAlarmSound(infinite, duration, type);
   };
 
   const dismissAlert = async () => {
     try {
       if (soundInstance) {
-        await soundInstance.stopAsync();
-        await soundInstance.unloadAsync();
+        await soundInstance.stopAsync().catch(() => {});
+        await soundInstance.unloadAsync().catch(() => {});
         setSoundInstance(null);
       }
     } catch (error) {

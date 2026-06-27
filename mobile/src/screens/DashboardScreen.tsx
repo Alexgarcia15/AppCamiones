@@ -11,13 +11,11 @@ export default function DashboardScreen() {
   const { triggerAlert } = useAlerts();
   const [blinkAnim] = useState(new Animated.Value(1));
 
-  // Cierre de sesión seguro: limpia el estado global y expulsa al usuario
   const handleLogout = async () => {
     try {
       await logout();
-      // Al cambiar 'user' a null, AppNavigator te expulsa automáticamente a la zona pública (Login)
     } catch (error) {
-      Alert.alert("Error", "No se pudo cerrar la sesión correctamente");
+      Alert.alert("Error", "No se pudo desvincular el dispositivo.");
     }
   };
 
@@ -37,116 +35,78 @@ export default function DashboardScreen() {
     }
   }, [alertasSeguro.length, blinkAnim]);
 
-  const handleSeguroCardPress = () => {
-    if (alertasSeguro.length > 0) {
-      Alert.alert("Vencimiento de Seguro", alertasSeguro[0].mensaje, [{ text: "Aceptar" }], {
-        cancelable: true,
-      });
-    }
-  };
-
- // Línea 44: El inicio del retorno visual
-return (
-  <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-    
-    {/* ⬇️ AQUÍ REEMPLAZAS LO VIEJO Y PEGAS ESTO (Línea 46) ⬇️ */}
- <View style={styles.topBar}>
-        {/* Flecha Izquierda: Cierra sesión y va a la portada principal del camión */}
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      
+      {/* ENCABEZADO */}
+      <View style={styles.headerContainer}>
         <TouchableOpacity onPress={handleLogout} style={styles.homeButton}>
           <Text style={styles.homeButtonText}>⟸</Text>
         </TouchableOpacity>
         
-        <Text style={styles.title}>Bienvenido {user?.name ?? "Dueño"} al Centro de Operaciones</Text>
+        <View style={styles.titleWrapper}>
+          <Text style={styles.ownerNameText}>{user?.name ? user.name.split(" ")[0] + " " + (user.name.split(" ")[1] || "") : "Dueño"}</Text>
+          <Text style={styles.truckCountSubtitle}>{trucks.length} Camiones</Text>
+        </View>
         
-        {/* Flecha Derecha: Manda directo a la pantalla de Inicio de Sesión (Login) */}
-        <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate("Login")}>
-          <Text style={styles.logoutText}>⟹</Text>
-        </TouchableOpacity>
+        <View style={{ width: 40 }} /> 
       </View>
-    {/* ⬆️ AQUÍ TERMINA EL BLOQUE PEGADO ⬆️ */}
 
-    <Text style={styles.subtitle}>PANEL DE CONTROL</Text>
+      <Text style={styles.instructionText}>TOCA UNA FICHA PARA VER EN TIEMPO REAL</Text>
 
+      {/* 🚚 FICHAS DE LOS CAMIONES */}
+      <View style={styles.listaCamiones}>
+        {trucks.length === 0 ? (
+          <Text style={styles.noTrucksText}>No tienes camiones asignados a esta flota.</Text>
+        ) : (
+          trucks.map((camion: any) => (
+            <TouchableOpacity 
+              key={camion.id} 
+              style={styles.truckCard}
+              onPress={() => {
+                // 🛡️ CORRECCIÓN DE CRASH: Mandamos el IMEI real del camión para que el mapa no explote
+                if (camion.latitud && camion.longitud) {
+                  navigation.navigate("LiveMap", { 
+                    imei: camion.imei || camion.id, 
+                    nombreCamion: `Ficha ${camion.ficha}` 
+                  });
+                } else {
+                  Alert.alert("Error", "Coordenadas GPS no disponibles para esta unidad.");
+                }
+              }}
+            >
+              {/* Información del camión a la izquierda */}
+              <View style={styles.truckInfoLeft}>
+                <Text style={styles.truckIcon}>🚚</Text>
+                <View style={styles.textContainer}>
+                  <Text style={styles.truckNameText}>Ficha {camion.ficha}</Text>
+                  <Text style={styles.truckDetailText} numberOfLines={1}>{camion.marca} {camion.modelo}</Text>
+                </View>
+              </View>
+
+              {/* 📍 BOTÓN VER MAPA: Arreglado con espacio seguro para que no se salga del celular */}
+              <View style={styles.truckStatusRight}>
+                <Text style={styles.verMapaText}>Ver mapa 📍</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
+      </View>
+
+      {/* ALERTAS */}
+      <Text style={styles.sectionTitle}>ALERTAS EN VIVO</Text>
       <View style={styles.grid}>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate("Trucks")}> 
-          <Text style={styles.icon}>🚚</Text>
-          <Text style={styles.cardTitle}>Mis Camiones</Text>
-          <Text style={styles.cardValue}>{trucks.length} Unidad{trucks.length === 1 ? "" : "es"}</Text>
-        </TouchableOpacity>
+        <View style={[styles.miniCard, alertasFueraRuta.length > 0 && styles.alertCard]}>
+          <Text style={styles.miniCardTitle}>🛑 Fuera de Ruta</Text>
+          <Text style={styles.miniCardValue}>{alertasFueraRuta.length}</Text>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.card, alertasFueraRuta.length > 0 && styles.alertCard]}
-          onPress={() => navigation.navigate("Alerts")}
-        >
-          <Text style={styles.icon}>🛑</Text>
-          <Text style={styles.cardTitle}>Fuera de Ruta</Text>
-          <Text style={styles.cardValue}>{alertasFueraRuta.length} Evento{alertasFueraRuta.length === 1 ? "" : "s"}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.card, alertasVelocidad.length > 0 && styles.speedAlertCard]}
-          onPress={() =>
-            alertasVelocidad.length > 0
-              ? navigation.navigate("SpeedAlertDetail", { alerta: alertasVelocidad[0] })
-              : navigation.navigate("Alerts")
-          }
-        >
-          <Text style={styles.icon}>⚡</Text>
-          <Text style={styles.cardTitle}>Exceso de Velocidad</Text>
-          <Text style={styles.cardValue}>{alertasVelocidad.length} Alerta{alertasVelocidad.length === 1 ? "" : "s"}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.card, alertasSeguro.length > 0 && styles.insuranceAlertCard]}
-          onPress={handleSeguroCardPress}
-        >
-          <Animated.View style={[{ opacity: alertasSeguro.length > 0 ? blinkAnim : 1 }]}>
-            <Text style={styles.icon}>🔰</Text>
-            <Text style={styles.cardTitle}>Alerta de Seguro</Text>
-            <Text style={[styles.cardDangerValue, alertasSeguro.length > 0 && styles.activeInsuranceText]}>
-              {alertasSeguro.length > 0
-                ? `⏳ ${alertasSeguro[0].diasParaVencer} día${alertasSeguro[0].diasParaVencer === 1 ? "" : "s"}`
-                : "Vigente"}
-            </Text>
-          </Animated.View>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.fullWidthCard} onPress={() => navigation.navigate("LiveMap")}> 
-          <View style={styles.row}>
-            <Text style={styles.iconLarge}>📍</Text>
-            <View style={styles.textContainer}>
-              <Text style={styles.cardTitleLarge}>Tiempo Real</Text>
-              <Text style={styles.cardValueLarge}>Monitorear camiones en vivo en el mapa</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+        <View style={[styles.miniCard, alertasVelocidad.length > 0 && styles.speedAlertCard]}>
+          <Text style={styles.miniCardTitle}>⚡ Excesos Vel.</Text>
+          <Text style={styles.miniCardValue}>{alertasVelocidad.length}</Text>
+        </View>
       </View>
 
-      <View style={styles.testPanel}>
-        <Text style={styles.testPanelTitle}>🛠️ PANEL DE PRUEBAS GPS</Text>
-        <Text style={styles.testPanelSubtitle}>Prueba rápida del sistema de alertas y sonidos</Text>
-
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => triggerAlert("velocidad")}
-        >
-          <Text style={styles.testButtonText}>Simular Exceso de Velocidad</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => triggerAlert("ignicion")}
-        >
-          <Text style={styles.testButtonText}>Simular Encendido de Motor</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.testButton}
-          onPress={() => triggerAlert("aceite", 400)}
-        >
-          <Text style={styles.testButtonText}>Simular Alerta de Aceite (400 KM)</Text>
-        </TouchableOpacity>
-      </View>
     </ScrollView>
   );
 }
@@ -157,176 +117,150 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 15, // Más margen interno para proteger los bordes en pantallas chicas
     paddingTop: 40,
     paddingBottom: 30,
   },
-  title: {
-    fontSize: 16, // Lo bajé un poquitico de 18 a 16 para que quepa bien con las dos flechas a los lados
-    fontWeight: "bold",
-    color: "white",
-    textAlign: "center",
-    flex: 1,
-    marginHorizontal: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#fbbf24",
-    textAlign: "center",
-    marginBottom: 25,
-  },
-  grid: {
+  headerContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "space-between",
-  },
-  card: {
-    backgroundColor: "#1e293b",
-    width: "48%",
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  alertCard: {
-    borderColor: "#f87171",
-    backgroundColor: "#111827",
-  },
-  speedAlertCard: {
-    borderColor: "#facc15",
-    backgroundColor: "#111827",
-  },
-  insuranceAlertCard: {
-    borderColor: "#f43f5e",
-    backgroundColor: "#111827",
-  },
-  activeInsuranceText: {
-    color: "#ff1744",
-    fontWeight: "bold",
-  },
-  fullWidthCard: {
-    backgroundColor: "#1e293b",
-    width: "100%",
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: "#2563eb",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  textContainer: {
-    marginLeft: 15,
-    flex: 1,
-  },
-  icon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  iconLarge: {
-    fontSize: 36,
-  },
-  cardTitle: {
-    fontSize: 14,
-    color: "#cbd5e1",
-    fontWeight: "600",
-    textAlign: "center",
     marginBottom: 5,
-  },
-  cardTitleLarge: {
-    fontSize: 18,
-    color: "#ffffff",
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  cardValue: {
-    fontSize: 13,
-    color: "#38bdf8",
-    fontWeight: "bold",
-  },
-  cardDangerValue: {
-    fontSize: 12,
-    color: "#f43f5e",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  cardValueLarge: {
-    fontSize: 13,
-    color: "#38bdf8",
-  },
-  topBar: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-    paddingHorizontal: 5,
     width: "100%",
   },
   homeButton: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#334155",
     backgroundColor: "#1f2937",
-    marginTop: -16,
   },
   homeButtonText: {
-    fontSize: 32,
-    color: "#00ff40", // Mantiene su verde encendido
+    fontSize: 24,
+    color: "#f43f5e",
     fontWeight: "900",
-    includeFontPadding: false,
   },
-  logoutButton: {
-    backgroundColor: "#1f2937",
+  titleWrapper: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ownerNameText: {
+    fontSize: 26,
+    fontWeight: "900",
+    color: "#ffffff",
+    textAlign: "center",
+  },
+  truckCountSubtitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#38bdf8",
+    marginTop: 4,
+    textAlign: "center",
+  },
+  instructionText: {
+    fontSize: 11,
+    fontWeight: "bold",
+    color: "#0ef860", 
+    textAlign: "center",
+    marginBottom: 20,
+    marginTop: 12,
+    letterSpacing: 0.5,
+  },
+  listaCamiones: {
+    width: "100%",
+    marginBottom: 25,
+  },
+  truckCard: {
+    backgroundColor: "#1e293b",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
+    width: "100%", // Obliga a la tarjeta a quedarse dentro del marco
+  },
+  truckInfoLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1, // Le da control de espacio al texto para que no empuje el botón del mapa
+    marginRight: 10,
+  },
+  textContainer: {
+    flex: 1, // Evita que los nombres largos tiren el botón hacia afuera
+  },
+  truckIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  truckNameText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  truckDetailText: {
+    color: "#64748b",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  truckStatusRight: {
+    backgroundColor: "#0b54f32b",
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 999,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#334155",
-    marginTop: -16, // Lo alineé a la misma altura que el botón izquierdo
+    borderColor: "#0b54f3",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90, // Le da un tamaño fijo seguro para que nunca se mocha
   },
- logoutText: {
-    color: "#00ff40", // <-- Cambia el color aquí abajo en los estilos
-    fontSize: 32,
-    fontWeight: "900",
-    includeFontPadding: false,
-  },
-  testPanel: {
-    backgroundColor: "#111827",
-    borderRadius: 16,
-    padding: 18,
-    marginTop: 20,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  testPanelTitle: {
-    color: "#fbbf24",
-    fontSize: 16,
+  verMapaText: {
+    color: "#38bdf8",
+    fontSize: 12,
     fontWeight: "bold",
-    marginBottom: 6,
   },
-  testPanelSubtitle: {
-    color: "#cbd5e1",
+  noTrucksText: {
+    color: "#94a3b8",
+    textAlign: "center",
+    marginTop: 10,
+  },
+  sectionTitle: {
+    color: "#64748b",
     fontSize: 13,
-    marginBottom: 14,
+    fontWeight: "bold",
+    marginBottom: 10,
+    paddingLeft: 2,
   },
-  testButton: {
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 12,
+  grid: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  miniCard: {
+    backgroundColor: "#1e293b",
+    width: "48%",
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
-  testButtonText: {
-    color: "#ffffff",
-    fontWeight: "bold",
-    fontSize: 14,
+  miniCardTitle: {
+    color: "#cbd5e1",
+    fontSize: 13,
+    fontWeight: "600",
   },
+  miniCardValue: {
+    color: "#38bdf8",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  alertCard: { borderColor: "#f87171", backgroundColor: "#111827" },
+  speedAlertCard: { borderColor: "#facc15", backgroundColor: "#111827" },
 });

@@ -8,20 +8,27 @@ function HomeScreen() {
   return (
     <View style={styles.container}>
       
-      {/* TÍTULO EN AZUL INTENSO - AHORA ENCIMA DE LA IMAGEN */}
+      {/* SECCIÓN DEL LOGO/ICONO DE LA APP (ARRIBA DEL TODO) */}
+      <Image
+        source={require('../../../assets/icon.png')}
+        style={styles.logoImage}
+        resizeMode="contain"
+      />
+
+      {/* TÍTULO EN AZUL INTENSO - ENCIIMA DE LA IMAGEN */}
       <Text style={styles.titleTop}>AppCamiones</Text>
       
-      {/* --- CABECERA CON LA IMAGEN --- */}
+      {/* --- CABECERA CON LA IMAGEN GRANDE DEL FRENTE --- */}
       <View style={styles.imageContainer}>
         <Image
-          source={require('../../../assets/camionCanva.png')}
+          source={require('../../../assets/camion_frente.png')}
           style={styles.headerImage}
           resizeMode="cover"
         />
       </View>
 
       {/* SUBTÍTULO ABAJO DE LA IMAGEN */}
-      <Text style={styles.subtitle}>Plataforma Móvil de Monitoreo y Gestión de Flotas de camiones</Text>
+      <Text style={styles.subtitle}>Plataforma Satelital de Monitoreo y Gestión de Flota de camiones</Text>
 
       {/* Espacio para los botones */}
       <View style={styles.buttonContainer}>
@@ -39,7 +46,7 @@ function HomeScreen() {
           style={styles.button} 
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.buttonText}>📍 Ver Mapa en Vivo</Text>
+          <Text style={styles.buttonText}>📍 Pasar a la flota</Text>
         </TouchableOpacity>
 
         {/* Botón directo a Alertas */}
@@ -61,7 +68,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a", 
     justifyContent: "center",
     alignItems: "center",
-    padding: 2
+    padding: 20 // Se aumentó un poco para que no quede pegado a los bordes del celular
+  },
+  logoImage: {
+    width: 80,         // Tamaño ideal para que se vea como un logo arriba
+    height: 80,
+    marginBottom: 10,  // Espacio pequeño entre el icono y el texto de abajo
   },
   imageContainer: {
     width: '100%',
@@ -75,14 +87,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  // NUEVO ESTILO: Para que quede arriba y con el amarillo fuerte
   titleTop: {
     fontSize: 40,          
     fontWeight: "900",      
-    letterSpacing: 1,       
+    letterSpacing: 1,      
     marginBottom: 40, // Espacio entre las letras y el camión
-    //backgroundColor: "#1058f2", 
-    color: "#9cbbfe", // Amarillo intenso
+    color: "#9cbbfe", 
     textAlign: "center",
   },
   subtitle: {
@@ -114,5 +124,4 @@ const styles = StyleSheet.create({
   },
 });
 
-// Forzamos la exportación limpia al final para que AppNavigator no se confunda
 export default HomeScreen;

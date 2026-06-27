@@ -14,36 +14,33 @@ import { useAuth } from "../context/AuthContext";
 
 export default function LoginScreen() {
   const navigation = useNavigation<any>();
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const { loginWithCode } = useAuth();
+  const [clientCode, setClientCode] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert("Error", "Ingresa usuario y contraseña.");
+    if (!clientCode.trim()) {
+      Alert.alert("Código requerido", "Por favor, introduce tu código único de cliente.");
       return;
     }
 
     setLoading(true);
-    const authenticated = await login(username, password);
+    const authenticated = await loginWithCode(clientCode);
     setLoading(false);
 
     if (authenticated) {
-      navigation.reset({
+     navigation.reset({
         index: 0,
         routes: [{ name: "Dashboard" }],
       });
       return;
     }
 
-    Alert.alert("Error de autenticación", "Usuario o contraseña incorrectos.");
+    Alert.alert("Código incorrecto", "Este código de cliente no está registrado en el sistema.");
   };
 
-  // Función rápida para autocompletar los campos de prueba
-  const seleccionarUsuarioPrueba = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
+  const seleccionarCodigoPrueba = (codigo: string) => {
+    setClientCode(codigo);
   };
 
   return (
@@ -52,25 +49,17 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.box}>
-        <Text style={styles.title}>Inicio de Sesión</Text>
-        <Text style={styles.subtitle}>Accede solo a tus camiones y alertas</Text>
+        
+        {/* 🟢 SOLO APPCAMIONES EN VERDE VIVO, SIN MÁS BASURA ABAJO */}
+        <Text style={styles.brandText}>AppCamiones</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Usuario"
+          placeholder="Ej: owner-1"
           placeholderTextColor="#94a3b8"
-          value={username}
+          value={clientCode}
           autoCapitalize="none"
-          onChangeText={setUsername}
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Contraseña"
-          placeholderTextColor="#94a3b8"
-          value={password}
-          secureTextEntry
-          onChangeText={setPassword}
+          onChangeText={setClientCode}
           editable={!loading}
         />
 
@@ -79,32 +68,31 @@ export default function LoginScreen() {
           onPress={handleLogin}
           disabled={loading}
         >
-          <Text style={styles.buttonText}>{loading ? "Verificando..." : "Ingresar"}</Text>
+          <Text style={styles.buttonText}>{loading ? "Configurando dispositivo..." : "Vincular Celular"}</Text>
         </TouchableOpacity>
 
-        {/* Sección de usuarios de prueba interactivos */}
         <View style={styles.helpContainer}>
-          <Text style={styles.helpTitle}>Usuarios de prueba (Toca para rellenar):</Text>
+          <Text style={styles.helpTitle}>Flotas de prueba (Toca para vincular rápido):</Text>
           
           <TouchableOpacity 
             style={styles.userBadge} 
-            onPress={() => seleccionarUsuarioPrueba("juan", "1234")}
+            onPress={() => seleccionarCodigoPrueba("owner-1")}
           >
-            <Text style={styles.helpText}>🚚 Juan — <Text style={styles.codeText}>juan / 1234</Text></Text>
+            <Text style={styles.helpText}>🚛 Juan Pérez — <Text style={styles.codeText}>owner-1</Text></Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.userBadge} 
-            onPress={() => seleccionarUsuarioPrueba("ana", "abcd")}
+            onPress={() => seleccionarCodigoPrueba("owner-2")}
           >
-            <Text style={styles.helpText}>🚚 Ana — <Text style={styles.codeText}>ana / abcd</Text></Text>
+            <Text style={styles.helpText}>🚛 Ana Martínez — <Text style={styles.codeText}>owner-2</Text></Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.userBadge} 
-            onPress={() => seleccionarUsuarioPrueba("mario", "pass")}
+            onPress={() => seleccionarCodigoPrueba("owner-3")}
           >
-            <Text style={styles.helpText}>🚚 Mario — <Text style={styles.codeText}>mario / pass</Text></Text>
+            <Text style={styles.helpText}>🚛 Mario López — <Text style={styles.codeText}>owner-3</Text></Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -128,28 +116,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#e2e8f0",
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: "#94a3b8",
-    marginBottom: 24,
-    fontSize: 14,
+  brandText: {
+    fontSize: 40,
+    fontWeight: "900",
+    color: "#0ef860", 
+    letterSpacing: -1.5, 
+    textAlign: "center",
+    marginBottom: 28,
+    marginTop: 10,
   },
   input: {
-    backgroundColor: "#4453f86b",
+    backgroundColor: "#1e293b",
     color: "#f8fafc",
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#0ef860",
+    borderColor: "#334155",
+    fontSize: 16,
   },
   button: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#0b54f3",
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -177,7 +164,7 @@ const styles = StyleSheet.create({
   },
   userBadge: {
     backgroundColor: "#1e293b",
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginTop: 6,
     borderWidth: 1,
@@ -188,7 +175,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   codeText: {
-    color: "#38bdf8",
+    color: "#0ef860", 
     fontWeight: "bold",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },

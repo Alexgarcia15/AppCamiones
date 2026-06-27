@@ -56,9 +56,11 @@ const rutaPermitida: Coordenada[] = [
   { latitude: 18.4240, longitude: -70.0250 },
 ];
 
-const METROS_MAX_DESVIO = 450; // Máximo permitido desde la ruta por defecto
+const METROS_MAX_DESVIO = 450; 
 
+// 🚚 AQUÍ ESTÁN LAS 10 FICHAS REALES DE JUAN PÉREZ (owner-1) + LAS DE LOS DEMÁS DUEÑOS
 export const datosCamiones: Camion[] = [
+  // --- FLOTA JUAN PÉREZ (owner-1) : 10 CAMIONES ---
   {
     id: "1",
     ownerId: "owner-1",
@@ -70,7 +72,7 @@ export const datosCamiones: Camion[] = [
     estado: "En Ruta",
     latitud: 18.4200,
     longitud: -70.0300,
-    velocidad: 92,
+    velocidad: 92, // Genera alerta automática
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split("T")[0],
   },
   {
@@ -89,8 +91,122 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "3",
-    ownerId: "owner-2",
+    ownerId: "owner-1",
     ficha: "F-03",
+    marca: "International",
+    modelo: "ProStar",
+    año: 2014,
+    kilometraje: "390,000 km",
+    estado: "Disponible",
+    latitud: 18.4180,
+    longitud: -70.0150,
+    velocidad: 65,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 45)).toISOString().split("T")[0],
+  },
+  {
+    id: "4",
+    ownerId: "owner-1",
+    ficha: "F-04",
+    marca: "Volvo",
+    modelo: "VNL 670",
+    año: 2016,
+    kilometraje: "410,000 km",
+    estado: "En Ruta",
+    latitud: 18.4190,
+    longitud: -70.0220,
+    velocidad: 70,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
+  },
+  {
+    id: "5",
+    ownerId: "owner-1",
+    ficha: "F-05",
+    marca: "Kenworth",
+    modelo: "T800",
+    año: 2012,
+    kilometraje: "600,000 km",
+    estado: "Disponible",
+    latitud: 18.4150,
+    longitud: -70.0280,
+    velocidad: 40,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 15)).toISOString().split("T")[0],
+  },
+  {
+    id: "6",
+    ownerId: "owner-1",
+    ficha: "F-06",
+    marca: "Peterbilt",
+    modelo: "379",
+    año: 2010,
+    kilometraje: "720,000 km",
+    estado: "En Ruta",
+    latitud: 18.4220,
+    longitud: -70.0260,
+    velocidad: 55,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 22)).toISOString().split("T")[0],
+  },
+  {
+    id: "7",
+    ownerId: "owner-1",
+    ficha: "F-07",
+    marca: "Mack",
+    modelo: "Granite",
+    año: 2014,
+    kilometraje: "310,000 km",
+    estado: "En Ruta",
+    latitud: 18.4250,
+    longitud: -70.0210,
+    velocidad: 78,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 80)).toISOString().split("T")[0],
+  },
+  {
+    id: "8",
+    ownerId: "owner-1",
+    ficha: "F-08",
+    marca: "Shacman",
+    modelo: "X3000",
+    año: 2021,
+    kilometraje: "120,000 km",
+    estado: "En Ruta",
+    latitud: 18.4170,
+    longitud: -70.0310,
+    velocidad: 68,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 90)).toISOString().split("T")[0],
+  },
+  {
+    id: "9",
+    ownerId: "owner-1",
+    ficha: "F-09",
+    marca: "International",
+    modelo: "WorkStar",
+    año: 2015,
+    kilometraje: "480,000 km",
+    estado: "Mantenimiento",
+    latitud: 18.4210,
+    longitud: -70.0330,
+    velocidad: 0,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 12)).toISOString().split("T")[0],
+  },
+  {
+    id: "10",
+    ownerId: "owner-1",
+    ficha: "F-10",
+    marca: "Hino",
+    modelo: "700",
+    año: 2018,
+    kilometraje: "250,000 km",
+    estado: "Disponible",
+    latitud: 18.4165,
+    longitud: -70.0295,
+    velocidad: 30,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 5)).toISOString().split("T")[0],
+  },
+
+  // --- OTROS DUEÑOS ---
+  {
+    id: "11",
+    ownerId: "owner-2",
+    ficha: "F-11",
     marca: "International",
     modelo: "ProStar",
     año: 2014,
@@ -102,9 +218,9 @@ export const datosCamiones: Camion[] = [
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 3)).toISOString().split("T")[0],
   },
   {
-    id: "4",
+    id: "12",
     ownerId: "owner-2",
-    ficha: "F-04",
+    ficha: "F-12",
     marca: "Kenworth",
     modelo: "T680",
     año: 2018,
@@ -116,7 +232,7 @@ export const datosCamiones: Camion[] = [
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 8)).toISOString().split("T")[0],
   },
   {
-    id: "5",
+    id: "13",
     ownerId: "owner-3",
     ficha: "F-05",
     marca: "Volvo",
@@ -128,7 +244,7 @@ export const datosCamiones: Camion[] = [
     longitud: -70.0225,
     velocidad: 45,
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 14)).toISOString().split("T")[0],
-  },
+  }
 ];
 
 const camionesPorOwnerId: Record<string, string[]> = datosCamiones.reduce((acc, camion) => {
@@ -193,7 +309,7 @@ function distanciaMinimaARuta(camion: Camion) {
     distanciaMinima = Math.min(distanciaMinima, distanciaSegmento);
   }
 
-  return distanciaMinima * 1000; // metros
+  return distanciaMinima * 1000; 
 }
 
 export function detectarDesvio(camion: Camion): AlertaRuta | null {

@@ -1,4 +1,5 @@
 ﻿import React from "react";
+import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useAuth } from "../context/AuthContext";
@@ -25,14 +26,10 @@ const MyTheme = {
   },
 };
 
-// 1. ZONA PÚBLICA: Lo que se ve ANTES de iniciar sesión
+// 1. ZONA PÚBLICA: Se ve SÓLO la primera vez para registrar el código del dueño
 function AuthStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
@@ -40,14 +37,10 @@ function AuthStack() {
   );
 }
 
-// 2. ZONA PRIVADA: Lo que ve el dueño de camiones DESPUÉS de loguearse
+// 2. ZONA PRIVADA: Entra DIRECTO aquí con un solo toque si ya está el código guardado
 function AppStack() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="Dashboard"
         component={DashboardScreen}
@@ -65,11 +58,30 @@ function AppStack() {
 }
 
 export default function AppNavigator() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Mientras la app lee la memoria del celular, mostramos una pantalla de carga limpia
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0b54f3" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer theme={MyTheme} ref={navigationRef}>
+      {/* Si ya hay un dueño registrado en la memoria, va directo a sus camiones. Si no, pide el código */}
       {user ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: "#0f172a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});

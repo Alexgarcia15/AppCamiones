@@ -1,56 +1,81 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { io } from 'socket.io-client';
 
 // CONEXIÓN AL PUERTO 3000 DE TU SERVIDOR
-const socket = io('http://192.168.100.151:3000'); 
+const socket = io('http://192.168.100.151:3000');
 
 export default function LiveMapScreen() {
-    // Estado para guardar la posición del camión
-    const [camion, setCamion] = useState<{ latitud: number; longitud: number; velocidad: number } | null>(null);
+    const route = useRoute<any>();
+    const navigation = useNavigation();
+
+    const imei = route?.params?.imei || '352812345678901';
+    const nombreCamion = route?.params?.nombreCamion || 'Camión General';
+
+    const [camion, setCamion] = useState<{ latitud: number; longitud: number; velocidad: number }>({
+        latitud: 18.4861,
+        longitud: -69.9312,
+        velocidad: 0,
+    });
+    const [tieneSenal, setTieneSenal] = useState(false);
 
     useEffect(() => {
-        // Escuchamos el IMEI específico que guardamos en la base de datos
-        socket.on('camion_352812345678901', (datos) => {
-            console.log("🚚 ¡Coordenada recibida en el celular!", datos);
-            setCamion({
-                latitud: datos.latitud,
-                longitud: datos.longitud,
-                velocidad: datos.velocidad
-            });
+        const eventoSocket = `camion_${imei}`;
+        console.log(`📡 Escuchando en vivo el canal de socket: ${eventoSocket}`);
+
+        socket.on(eventoSocket, (datos) => {
+            if (datos && datos.latitud && datos.longitud) {
+                console.log(`🚚 ¡Coordenada recibida para ${nombreCamion}!`, datos);
+                setCamion({
+                    latitud: Number(datos.latitud),
+                    longitud: Number(datos.longitud),
+                    velocidad: datos.velocidad || 0,
+                });
+                setTieneSenal(true);
+            }
         });
 
         return () => {
-            socket.off('camion_352812345678901');
+            socket.off(eventoSocket);
         };
-    }, []);
-
-    // Coordenadas iniciales por si el camión no ha reportado (Centro de RD / Haina)
-    const regionInicial = {
-        latitude: camion ? camion.latitud : 18.4178,
-        longitude: camion ? camion.longitud : -70.0219,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-    };
+    }, [imei, nombreCamion]);
 
     return (
         <View style={styles.container}>
-            <MapView style={styles.map} initialRegion={regionInicial}>
-                {camion && (
-                    <Marker
-                        coordinate={{ latitude: camion.latitud, longitude: camion.longitud }}
-                        title="Mi Camión Mack"
-                        description={`Velocidad: ${camion.velocidad} km/h`}
-                    />
-                )}
+            <MapView
+                style={styles.map}
+                initialRegion={{
+                    latitude: camion.latitud,
+                    longitude: camion.longitud,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                }}
+                region={{
+                    latitude: camion.latitud,
+                    longitude: camion.longitud,
+                    latitudeDelta: 0.05,
+                    longitudeDelta: 0.05,
+                }}
+            >
+                <Marker
+                    coordinate={{ latitude: camion.latitud, longitude: camion.longitud }}
+                    title={nombreCamion}
+                    description={`Velocidad: ${camion.velocidad} km/h`}
+                />
             </MapView>
-            
-            {/* Letrero flotante para ver la velocidad en vivo */}
+
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                <Text style={styles.backButtonText}>⬅ Volver al Listado</Text>
+            </TouchableOpacity>
+
             <View style={styles.infoBox}>
+                <Text style={styles.truckName}>{nombreCamion}</Text>
                 <Text style={styles.infoText}>
-                    {camion ? `Velocidad en vivo: ${camion.velocidad} km/h` : "Esperando señal del camión..."}
+                    {tieneSenal ? `Velocidad: ${camion.velocidad} km/h` : "Esperando señal GPS..."}
                 </Text>
+                <Text style={styles.imeiText}>IMEI: {imei}</Text>
             </View>
         </View>
     );
@@ -59,25 +84,53 @@ export default function LiveMapScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#0f172a',
     },
     map: {
-        width: Dimensions.get('window').width,
-        height: Dimensions.get('window').height,
+        flex: 1,
+    },
+    backButton: {
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        zIndex: 10,
+        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#475569',
+    },
+    backButtonText: {
+        color: '#ffffff',
+        fontWeight: 'bold',
     },
     infoBox: {
         position: 'absolute',
-        bottom: 50,
+        bottom: 40,
         left: 20,
         right: 20,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 15,
-        borderRadius: 10,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 16,
+        borderRadius: 12,
         alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#0b54f3',
+    },
+    truckName: {
+        color: '#9cbbfe',
+        fontWeight: '900',
+        fontSize: 18,
+        marginBottom: 4,
     },
     infoText: {
         color: 'white',
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 15,
+        marginBottom: 4,
+    },
+    imeiText: {
+        color: '#64748b',
+        fontSize: 12,
     },
 });

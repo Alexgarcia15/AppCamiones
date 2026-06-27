@@ -34,7 +34,8 @@ export default function RegisterScreen() {
         <Text style={styles.buttonText}>Registrarse</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+      {/* 🟢 CORREGIDO: Enlace limpio para volver al Login con la navegación blindada */}
+      <TouchableOpacity onPress={() => (navigation as any).navigate("Login")}>
         <Text style={styles.linkText}>¿Ya tienes cuenta? Inicia sesión</Text>
       </TouchableOpacity>
     </View>
@@ -91,6 +92,6 @@ const styles = StyleSheet.create({
     color: "#60a5fa",
     marginTop: 20,
     fontSize: 14,
+    fontWeight: "500",
   },
 });
-

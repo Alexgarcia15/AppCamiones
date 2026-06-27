@@ -9,20 +9,25 @@ import {
   AlertSeverityEnum,
   TruckStateEnum,
 } from "../types/truckTypes";
-import { alertSoundService } from "./alertSoundService";
+
+// 🟢 Aquí pegas el bloque de la navegación real:
+import { navigate } from "../navigation/NavigationService";
+
+// 🟢 Aquí pegas el parche temporal del sonido:
+// @ts-ignore
+import alertSoundServiceInstance from "./alertSoundService";
+const alertSoundService = alertSoundServiceInstance as any;
+
 import { truckStateService } from "./remoteShutdownService";
 
+// 👇 DE AQUÍ PARA ABAJO DEJA TODO TU CÓDIGO EXACTAMENTE COMO ESTABA
 class CriticalAlertsService {
   private activeAlerts: Map<string, CriticalAlert> = new Map();
   private alertListeners: Set<(alerts: CriticalAlert[]) => void> = new Set();
   private maintenanceCheckIntervals: Map<string, NodeJS.Timeout> = new Map();
   private insuranceCheckIntervals: Map<string, NodeJS.Timeout> = new Map();
+  
 
-  /**
-   * ALERTA 1: FUERA DE RUTA
-   * - Sonido continuo infinito (bucle)
-   * - Presionar = ir a LiveMapScreen
-   */
   triggerOffRouteAlert(truckId: string, truckFicha: string, message: string) {
     const alertId = `OFF_ROUTE_${truckId}_${Date.now()}`;
 
