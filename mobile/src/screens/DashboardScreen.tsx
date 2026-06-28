@@ -1,15 +1,11 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Animated, Alert } from "react-native";
+﻿import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
-import { useAlerts } from "../context/AlertsContext";
-import { obtenerAlertasFueraDeRuta, obtenerAlertasVelocidad, obtenerAlertasSeguro, simularAlarmaSeguro } from "../utils/routeAlertUtils";
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
   const { user, trucks, logout } = useAuth();
-  const { triggerAlert } = useAlerts();
-  const [blinkAnim] = useState(new Animated.Value(1));
 
   const handleLogout = async () => {
     try {
@@ -19,26 +15,9 @@ export default function DashboardScreen() {
     }
   };
 
-  const alertasFueraRuta = useMemo(() => obtenerAlertasFueraDeRuta(trucks), [trucks]);
-  const alertasVelocidad = useMemo(() => obtenerAlertasVelocidad(trucks), [trucks]);
-  const alertasSeguro = useMemo(() => obtenerAlertasSeguro(trucks), [trucks]);
-
-  useEffect(() => {
-    if (alertasSeguro.length > 0) {
-      simularAlarmaSeguro(alertasSeguro[0]);
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(blinkAnim, { toValue: 0.3, duration: 600, useNativeDriver: false }),
-          Animated.timing(blinkAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
-        ])
-      ).start();
-    }
-  }, [alertasSeguro.length, blinkAnim]);
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       
-      {/* ENCABEZADO */}
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={handleLogout} style={styles.homeButton}>
           <Text style={styles.homeButtonText}>⟸</Text>
@@ -54,7 +33,6 @@ export default function DashboardScreen() {
 
       <Text style={styles.instructionText}>TOCA UNA FICHA PARA VER EN TIEMPO REAL</Text>
 
-      {/* 🚚 FICHAS DE LOS CAMIONES */}
       <View style={styles.listaCamiones}>
         {trucks.length === 0 ? (
           <Text style={styles.noTrucksText}>No tienes camiones asignados a esta flota.</Text>
@@ -64,7 +42,6 @@ export default function DashboardScreen() {
               key={camion.id} 
               style={styles.truckCard}
               onPress={() => {
-                // 🛡️ CORRECCIÓN DE CRASH: Mandamos el IMEI real del camión para que el mapa no explote
                 if (camion.latitud && camion.longitud) {
                   navigation.navigate("LiveMap", { 
                     imei: camion.imei || camion.id, 
@@ -75,7 +52,6 @@ export default function DashboardScreen() {
                 }
               }}
             >
-              {/* Información del camión a la izquierda */}
               <View style={styles.truckInfoLeft}>
                 <Text style={styles.truckIcon}>🚚</Text>
                 <View style={styles.textContainer}>
@@ -84,27 +60,12 @@ export default function DashboardScreen() {
                 </View>
               </View>
 
-              {/* 📍 BOTÓN VER MAPA: Arreglado con espacio seguro para que no se salga del celular */}
               <View style={styles.truckStatusRight}>
                 <Text style={styles.verMapaText}>Ver mapa 📍</Text>
               </View>
             </TouchableOpacity>
           ))
         )}
-      </View>
-
-      {/* ALERTAS */}
-      <Text style={styles.sectionTitle}>ALERTAS EN VIVO</Text>
-      <View style={styles.grid}>
-        <View style={[styles.miniCard, alertasFueraRuta.length > 0 && styles.alertCard]}>
-          <Text style={styles.miniCardTitle}>🛑 Fuera de Ruta</Text>
-          <Text style={styles.miniCardValue}>{alertasFueraRuta.length}</Text>
-        </View>
-
-        <View style={[styles.miniCard, alertasVelocidad.length > 0 && styles.speedAlertCard]}>
-          <Text style={styles.miniCardTitle}>⚡ Excesos Vel.</Text>
-          <Text style={styles.miniCardValue}>{alertasVelocidad.length}</Text>
-        </View>
       </View>
 
     </ScrollView>
@@ -117,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
   },
   content: {
-    paddingHorizontal: 15, // Más margen interno para proteger los bordes en pantallas chicas
+    paddingHorizontal: 15,
     paddingTop: 40,
     paddingBottom: 30,
   },
@@ -162,7 +123,7 @@ const styles = StyleSheet.create({
   instructionText: {
     fontSize: 11,
     fontWeight: "bold",
-    color: "#0ef860", 
+    color: "#0ef860",
     textAlign: "center",
     marginBottom: 20,
     marginTop: 12,
@@ -182,16 +143,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: "#334155",
-    width: "100%", // Obliga a la tarjeta a quedarse dentro del marco
+    width: "100%",
   },
   truckInfoLeft: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1, // Le da control de espacio al texto para que no empuje el botón del mapa
+    flex: 1,
     marginRight: 10,
   },
   textContainer: {
-    flex: 1, // Evita que los nombres largos tiren el botón hacia afuera
+    flex: 1,
   },
   truckIcon: {
     fontSize: 24,
@@ -216,7 +177,7 @@ const styles = StyleSheet.create({
     borderColor: "#0b54f3",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 90, // Le da un tamaño fijo seguro para que nunca se mocha
+    minWidth: 90,
   },
   verMapaText: {
     color: "#38bdf8",
@@ -228,39 +189,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 10,
   },
-  sectionTitle: {
-    color: "#64748b",
-    fontSize: 13,
-    fontWeight: "bold",
-    marginBottom: 10,
-    paddingLeft: 2,
-  },
-  grid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  miniCard: {
-    backgroundColor: "#1e293b",
-    width: "48%",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#334155",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  miniCardTitle: {
-    color: "#cbd5e1",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  miniCardValue: {
-    color: "#38bdf8",
-    fontWeight: "bold",
-    fontSize: 15,
-  },
-  alertCard: { borderColor: "#f87171", backgroundColor: "#111827" },
-  speedAlertCard: { borderColor: "#facc15", backgroundColor: "#111827" },
 });

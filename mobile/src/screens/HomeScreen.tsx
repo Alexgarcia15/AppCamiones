@@ -1,12 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
-
 function HomeScreen() {
   const navigation = useNavigation<any>();
   const { user } = useAuth();
-
   const handleEntrar = () => {
     if (user) {
       navigation.navigate('Dashboard');
@@ -14,12 +12,8 @@ function HomeScreen() {
       navigation.navigate('Login');
     }
   };
-
   return (
     <View style={styles.container}>
-
-      <Text style={styles.titleTop}>AppCamiones</Text>
-
       <View style={styles.imageContainer}>
         <Image
           source={require('../../../assets/camion_frente.png')}
@@ -27,18 +21,15 @@ function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-
-      <Text style={styles.subtitle}>Plataforma Satelital de Monitoreo y Gestión de Flota de camiones</Text>
-
+      <Text style={styles.subtitle}>Plataforma Satelital de Monitoreo y Gestion de Flota de Camiones</Text>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleEntrar}>
-          <Text style={styles.buttonText}>🚚 Entrar a la flota</Text>
+          <Text style={styles.buttonText}>Ver en Tiempo Real</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -53,19 +44,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 30,
-    marginTop: 30,
+    marginTop: -30,
     backgroundColor: '#1e293b',
   },
   headerImage: {
     width: '100%',
     height: '100%',
-  },
-  titleTop: {
-    fontSize: 42,
-    fontWeight: "900",
-    letterSpacing: 1,
-    color: "#9cbbfe",
-    textAlign: "center",
   },
   subtitle: {
     fontSize: 15,
@@ -94,5 +78,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
 export default HomeScreen;

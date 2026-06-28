@@ -10,9 +10,9 @@ export interface User {
 
 // Lista de tus clientes autorizados en tu sistema
 const clientesAutorizados: User[] = [
-  { ownerId: "owner-1", name: "Juan Pérez (10 Camiones)" },
-  { ownerId: "owner-2", name: "Ana Martínez (Flota Haina)" },
-  { ownerId: "owner-3", name: "Mario López (Flota Santiago)" },
+  { ownerId: "juan", name: "Juan Pérez (10 Camiones)" },
+  { ownerId: "ana", name: "Ana Martínez (Flota Haina)" },
+  { ownerId: "mario", name: "Mario López (Flota Santiago)" },
 ];
 
 interface AuthContextData {

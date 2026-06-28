@@ -1,4 +1,4 @@
-import { Alert, Vibration } from "react-native";
+﻿import { Alert, Vibration } from "react-native";
 
 export interface Coordenada {
   latitude: number;
@@ -11,7 +11,7 @@ export interface Camion {
   ficha: string;
   marca: string;
   modelo: string;
-  año: number;
+  ano: number;
   kilometraje: string;
   estado: "En Ruta" | "Mantenimiento" | "Disponible";
   latitud: number;
@@ -58,16 +58,16 @@ const rutaPermitida: Coordenada[] = [
 
 const METROS_MAX_DESVIO = 450; 
 
-// 🚚 AQUÍ ESTÁN LAS 10 FICHAS REALES DE JUAN PÉREZ (owner-1) + LAS DE LOS DEMÁS DUEÑOS
+// ðŸšš AQUÃ ESTÃN LAS 10 FICHAS REALES DE JUAN PÃ‰REZ (owner-1) + LAS DE LOS DEMÃS DUEÃ‘OS
 export const datosCamiones: Camion[] = [
-  // --- FLOTA JUAN PÉREZ (owner-1) : 10 CAMIONES ---
+  // --- FLOTA JUAN PÃ‰REZ (owner-1) : 10 CAMIONES ---
   {
     id: "1",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-01",
     marca: "Mack",
     modelo: "Pinnacle MP7",
-    año: 2011,
+    anoa: 2011,
     kilometraje: "450,000 km",
     estado: "En Ruta",
     latitud: 18.4200,
@@ -77,11 +77,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "2",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-02",
     marca: "Freightliner",
     modelo: "Cascadia",
-    año: 2015,
+    ano: 2015,
     kilometraje: "520,000 km",
     estado: "Mantenimiento",
     latitud: 18.4350,
@@ -91,11 +91,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "3",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-03",
     marca: "International",
     modelo: "ProStar",
-    año: 2014,
+    ano: 2014,
     kilometraje: "390,000 km",
     estado: "Disponible",
     latitud: 18.4180,
@@ -105,11 +105,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "4",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-04",
     marca: "Volvo",
     modelo: "VNL 670",
-    año: 2016,
+    ano: 2016,
     kilometraje: "410,000 km",
     estado: "En Ruta",
     latitud: 18.4190,
@@ -119,11 +119,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "5",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-05",
     marca: "Kenworth",
     modelo: "T800",
-    año: 2012,
+    ano: 2012,
     kilometraje: "600,000 km",
     estado: "Disponible",
     latitud: 18.4150,
@@ -133,11 +133,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "6",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-06",
     marca: "Peterbilt",
     modelo: "379",
-    año: 2010,
+    ano: 2010,
     kilometraje: "720,000 km",
     estado: "En Ruta",
     latitud: 18.4220,
@@ -147,11 +147,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "7",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-07",
     marca: "Mack",
     modelo: "Granite",
-    año: 2014,
+    ano: 2014,
     kilometraje: "310,000 km",
     estado: "En Ruta",
     latitud: 18.4250,
@@ -161,11 +161,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "8",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-08",
     marca: "Shacman",
     modelo: "X3000",
-    año: 2021,
+    ano: 2021,
     kilometraje: "120,000 km",
     estado: "En Ruta",
     latitud: 18.4170,
@@ -175,11 +175,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "9",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-09",
     marca: "International",
     modelo: "WorkStar",
-    año: 2015,
+    ano: 2015,
     kilometraje: "480,000 km",
     estado: "Mantenimiento",
     latitud: 18.4210,
@@ -189,11 +189,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "10",
-    ownerId: "owner-1",
+    ownerId: "juan",
     ficha: "F-10",
     marca: "Hino",
     modelo: "700",
-    año: 2018,
+    ano: 2018,
     kilometraje: "250,000 km",
     estado: "Disponible",
     latitud: 18.4165,
@@ -202,14 +202,14 @@ export const datosCamiones: Camion[] = [
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
   },
 
-  // --- OTROS DUEÑOS ---
+  // --- OTROS DUEÃ‘OS ---
   {
     id: "11",
-    ownerId: "owner-2",
+    ownerId: "ana",
     ficha: "F-11",
     marca: "International",
     modelo: "ProStar",
-    año: 2014,
+    ano: 2014,
     kilometraje: "380,000 km",
     estado: "Disponible",
     latitud: 18.4180,
@@ -219,11 +219,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "12",
-    ownerId: "owner-2",
+    ownerId: "ana",
     ficha: "F-12",
     marca: "Kenworth",
     modelo: "T680",
-    año: 2018,
+    ano: 2018,
     kilometraje: "280,000 km",
     estado: "En Ruta",
     latitud: 18.4280,
@@ -233,11 +233,11 @@ export const datosCamiones: Camion[] = [
   },
   {
     id: "13",
-    ownerId: "owner-3",
+    ownerId: "mario",
     ficha: "F-05",
     marca: "Volvo",
     modelo: "VNL 760",
-    año: 2017,
+    ano: 2017,
     kilometraje: "360,000 km",
     estado: "Disponible",
     latitud: 18.4125,
@@ -324,10 +324,10 @@ export function detectarDesvio(camion: Camion): AlertaRuta | null {
     return {
       id: `alerta-${camion.id}`,
       camion,
-      mensaje: `Unidad ${camion.ficha} se salió de la ruta permitida.`,
+      mensaje: `Unidad ${camion.ficha} se saliÃ³ de la ruta permitida.`,
       telefonoPropietario: "+18295581414",
       coordenadas: ubicacion,
-      direccion: "Av. Las Américas, cerca del tramo Haina-Puerto",
+      direccion: "Av. Las AmÃ©ricas, cerca del tramo Haina-Puerto",
       carretera: "Autopista Duarte",
       fecha: new Date().toISOString(),
     };
@@ -392,7 +392,7 @@ export function detectarVencimientoSeguro(camion: Camion): AlertaSeguro | null {
     return {
       id: `seguro-${camion.id}`,
       camion,
-      mensaje: `El camión ficha ${camion.ficha} se le vence el seguro en ${diasFaltantes} día${diasFaltantes === 1 ? "" : "s"}.`,
+      mensaje: `El camiÃ³n ficha ${camion.ficha} se le vence el seguro en ${diasFaltantes} dÃ­a${diasFaltantes === 1 ? "" : "s"}.`,
       telefonoPropietario: "+18295581414",
       diasParaVencer: diasFaltantes,
       fecha: new Date().toISOString(),

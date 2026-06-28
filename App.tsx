@@ -1,4 +1,4 @@
-import "react-native-gesture-handler";
+﻿import "react-native-gesture-handler";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { View, Text, StyleSheet, Pressable } from "react-native";
@@ -15,8 +15,8 @@ export default function App() {
         <AlertProvider>
           <View style={styles.shell}>
             <View style={styles.header}>
-              <Text style={styles.title}>App Camiones</Text>
-              <Text style={styles.subtitle}>Control moderno y elegante de tu flota</Text>
+              <Text style={styles.title}>App_Camiones</Text>
+              
             </View>
 
             <View style={styles.content}>
@@ -45,14 +45,17 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 16,
     paddingHorizontal: 20,
+    alignItems: "center",
     backgroundColor: "#0f1b2c",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
   title: {
-    color: "#ffffff",
-    fontSize: 28,
-    fontWeight: "700",
+    color: "#FFD700",
+    fontSize: 34,
+    fontWeight: "900",
+    letterSpacing: -1,
+    textAlign: "center",
   },
   subtitle: {
     color: "#a3b3c6",
@@ -86,3 +89,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
+
+
+
+
