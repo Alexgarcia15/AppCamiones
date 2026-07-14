@@ -13,12 +13,16 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#0f172a"
-    },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "backgroundColor": "#0f172a",
+          "imageWidth": 200
+        }
+      ]
     ],
     "android": {
       "package": "com.hector.appcamiones",
