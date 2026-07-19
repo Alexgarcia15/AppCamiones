@@ -164,10 +164,13 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   truckDetailText: {
-    color: "#64748b",
-    fontSize: 12,
+    color: "#FFE082",
+    fontSize: 14,
     marginTop: 2,
+    fontWeight: "600",
   },
+  
+  
   truckStatusRight: {
     backgroundColor: "#0b54f32b",
     paddingVertical: 8,

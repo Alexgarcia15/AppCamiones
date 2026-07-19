@@ -4,6 +4,24 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "preview-hector": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_OWNER_TOKEN": "hct_7f3a9b2e1d4c8f6a5b0e9d2c1a8f7e6b"
+      }
+    },
+    "preview-nini": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_OWNER_TOKEN": "nin_3d8e1f4a7b2c9e6d0f5a8b3c1e7d4f9a"
+      }
+    },
+    "preview-aguita": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_OWNER_TOKEN": "agu_9c2e5f8a1b4d7e0f3c6a9b2e5f8d1c4e"
+      }
     }
   }
 }

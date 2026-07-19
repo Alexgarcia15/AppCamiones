@@ -67,7 +67,7 @@ export const datosCamiones: Camion[] = [
     ficha: "F-01",
     marca: "Mack",
     modelo: "Pinnacle MP7",
-    anoa: 2011,
+    ano: 2011,
     kilometraje: "450,000 km",
     estado: "En Ruta",
     latitud: 18.4200,
@@ -235,6 +235,7 @@ export const datosCamiones: Camion[] = [
     id: "13",
     ownerId: "mario",
     ficha: "F-05",
+    
     marca: "Volvo",
     modelo: "VNL 760",
     ano: 2017,
@@ -243,7 +244,22 @@ export const datosCamiones: Camion[] = [
     latitud: 18.4125,
     longitud: -70.0225,
     velocidad: 45,
-    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 14)).toISOString().split("T")[0],
+ fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 14)).toISOString().split("T")[0],
+  },
+  {
+    id: "14",
+    ownerId: "hector",
+    imei: "352812345678901",
+    ficha: "HG-01",
+    marca: "Mack",
+    modelo: "Pinnacle",
+    ano: 2011,
+    kilometraje: "50,000 km",
+    estado: "Disponible",
+    latitud: 18.4200,
+    longitud: -70.0300,
+    velocidad: 0,
+    fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 90)).toISOString().split("T")[0],
   }
 ];
 

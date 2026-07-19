@@ -3,25 +3,39 @@ import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { io } from 'socket.io-client';
+import { useAuth, API_BASE_URL } from '../context/AuthContext';
 
-// CONEXIÓN AL PUERTO 3000 DE TU SERVIDOR
-const socket = io('http://192.168.100.151:3000');
+const socket = io(API_BASE_URL);
 
 export default function LiveMapScreen() {
     const route = useRoute<any>();
     const navigation = useNavigation();
+    const { user } = useAuth();
 
-    const imei = route?.params?.imei || '352812345678901';
-    const nombreCamion = route?.params?.nombreCamion || 'Camión General';
+    const camionParam = route?.params?.camion;
+    const imei = camionParam?.imei || '352812345678901';
+    const nombreCamion = camionParam ? `${camionParam.ficha} - ${camionParam.marca}` : 'Camión General';
 
     const [camion, setCamion] = useState<{ latitud: number; longitud: number; velocidad: number }>({
-        latitud: 18.4861,
-        longitud: -69.9312,
-        velocidad: 0,
+        latitud: camionParam?.latitud || 18.4861,
+        longitud: camionParam?.longitud || -69.9312,
+        velocidad: camionParam?.velocidad || 0,
     });
+    
     const [tieneSenal, setTieneSenal] = useState(false);
+    const [autenticado, setAutenticado] = useState(false);
 
     useEffect(() => {
+        if (!user?.token) return;
+
+        // Nos autenticamos con nuestro token para entrar a nuestra sala privada
+        socket.emit('autenticar', user.token);
+
+        socket.on('autenticado', (respuesta) => {
+            setAutenticado(respuesta.ok);
+            console.log(respuesta.ok ? '🔑 Autenticado en el servidor' : '❌ Token rechazado');
+        });
+
         const eventoSocket = `camion_${imei}`;
         console.log(`📡 Escuchando en vivo el canal de socket: ${eventoSocket}`);
 
@@ -39,8 +53,9 @@ export default function LiveMapScreen() {
 
         return () => {
             socket.off(eventoSocket);
+            socket.off('autenticado');
         };
-    }, [imei, nombreCamion]);
+    }, [imei, nombreCamion, user?.token]);
 
     return (
         <View style={styles.container}>

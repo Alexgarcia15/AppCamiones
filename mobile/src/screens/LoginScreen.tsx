@@ -21,15 +21,13 @@ export default function LoginScreen() {
       Alert.alert("Codigo requerido", "Introduce tu codigo de acceso.");
       return;
     }
-
     setLoading(true);
-    const authenticated = await loginWithCode(clientCode);
+    const authenticated = await loginWithCode(clientCode.trim());
     setLoading(false);
-
     if (!authenticated) {
       Alert.alert("Codigo incorrecto", "Este codigo no esta registrado.");
     }
-  };
+};
 
   return (
     <KeyboardAvoidingView

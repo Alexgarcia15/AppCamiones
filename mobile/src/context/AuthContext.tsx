@@ -1,19 +1,33 @@
-﻿import React, { createContext, ReactNode, useContext, useMemo, useState, useEffect } from "react";
+﻿import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Camion, filtrarCamionesPorOwnerId, obtenerCamionesPorPagina } from "../utils/routeAlertUtils";
 
-// Ahora el usuario solo necesita su código único de cliente (ownerId)
+// Direccion de tu servidor (por ahora tu IP local, luego sera tu dominio real)
+export const API_BASE_URL = "http://192.168.100.151:3000";
+
+// Token grabado de fabrica en esta compilacion especifica (cada cliente tiene el suyo)
+const OWNER_TOKEN_BAKED = process.env.EXPO_PUBLIC_OWNER_TOKEN;
+
+export interface Camion {
+  id: number;
+  owner_id: string;
+  imei: string;
+  ficha: string;
+  marca: string;
+  modelo: string;
+  ano: number;
+  kilometraje: string;
+  estado: string;
+  latitud: number;
+  longitud: number;
+  velocidad: number;
+  fecha_vencimiento_seguro: string | null;
+}
+
 export interface User {
   ownerId: string;
   name: string;
+  token: string;
 }
-
-// Lista de tus clientes autorizados en tu sistema
-const clientesAutorizados: User[] = [
-  { ownerId: "juan", name: "Juan Pérez (10 Camiones)" },
-  { ownerId: "ana", name: "Ana Martínez (Flota Haina)" },
-  { ownerId: "mario", name: "Mario López (Flota Santiago)" },
-];
 
 interface AuthContextData {
   user: User | null;
@@ -21,67 +35,82 @@ interface AuthContextData {
   loading: boolean;
   loginWithCode: (code: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  getPage: (page: number, size?: number) => Camion[];
+  refreshTrucks: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true); // Para saber si está leyendo la memoria al arrancar
+  const [trucks, setTrucks] = useState<Camion[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // Al abrir la app, revisa automáticamente si el celular ya tiene un dueño guardado
-  useEffect(() => {
-    async function cargarSesionGuardada() {
-      try {
-        const codigoGuardado = await AsyncStorage.getItem("@codigo_dueno");
-        if (codigoGuardado) {
-          const found = clientesAutorizados.find((c) => c.ownerId === codigoGuardado.trim().toLowerCase());
-          if (found) {
-            setUser(found);
-          }
-        }
-      } catch (e) {
-        console.log("Error leyendo la memoria interna", e);
-      } finally {
-        setLoading(false);
-      }
+  const cargarDatos = async (token: string) => {
+    try {
+      const perfilRes = await fetch(`${API_BASE_URL}/api/mi-perfil`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!perfilRes.ok) throw new Error("Token invalido");
+      const perfil = await perfilRes.json();
+      setUser({ ownerId: perfil.ownerId, name: perfil.nombre, token });
+
+      const camionesRes = await fetch(`${API_BASE_URL}/api/mis-camiones`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const camionesData = await camionesRes.json();
+      setTrucks(camionesData);
+    } catch (e) {
+      console.log("Error cargando datos del dueño:", e);
+      setUser(null);
+      setTrucks([]);
     }
-    cargarSesionGuardada();
+  };
+
+  useEffect(() => {
+    async function iniciar() {
+      if (OWNER_TOKEN_BAKED) {
+        // Esta compilacion ya trae el token de fabrica: entra directo
+        await cargarDatos(OWNER_TOKEN_BAKED);
+        setLoading(false);
+        return;
+      }
+      // Sin token de fabrica (modo desarrollo): revisa si hay uno guardado de antes
+      const tokenGuardado = await AsyncStorage.getItem("@owner_token");
+      if (tokenGuardado) {
+        await cargarDatos(tokenGuardado);
+      }
+      setLoading(false);
+    }
+    iniciar();
   }, []);
 
-  const trucks = useMemo(() => {
-    if (!user) return [];
-    // Filtra automáticamente solo los camiones que le pertenecen a este dueño
-    return filtrarCamionesPorOwnerId(user.ownerId);
-  }, [user]);
-
-  // Esta función se ejecuta solo la primera vez que ingresan el código
   const loginWithCode = async (code: string) => {
-    const normalized = code.trim().toLowerCase();
-    const found = clientesAutorizados.find((c) => c.ownerId === normalized);
-    
-    if (!found) return false;
-
-    // Guarda el código en el celular para que nunca más tenga que loguearse
-    await AsyncStorage.setItem("@codigo_dueno", normalized);
-    setUser(found);
-    return true;
+    const token = code.trim();
+    try {
+      const perfilRes = await fetch(`${API_BASE_URL}/api/mi-perfil`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!perfilRes.ok) return false;
+      await AsyncStorage.setItem("@owner_token", token);
+      await cargarDatos(token);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
-  // Por si tú necesitas resetear la app de un cliente
   const logout = async () => {
-    await AsyncStorage.removeItem("@codigo_dueno");
+    await AsyncStorage.removeItem("@owner_token");
     setUser(null);
+    setTrucks([]);
   };
 
-  const getPage = (page: number, size = 3) => {
-    if (!user) return [];
-    return obtenerCamionesPorPagina(user.ownerId, page, size);
+  const refreshTrucks = async () => {
+    if (user) await cargarDatos(user.token);
   };
 
   return (
-    <AuthContext.Provider value={{ user, trucks, loading, loginWithCode, logout, getPage }}>
+    <AuthContext.Provider value={{ user, trucks, loading, loginWithCode, logout, refreshTrucks }}>
       {children}
     </AuthContext.Provider>
   );

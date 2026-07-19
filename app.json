@@ -14,16 +14,24 @@
       "**/*"
     ],
     "plugins": [
-      "expo-font",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/icon.png",
-          "backgroundColor": "#0f172a",
-          "imageWidth": 200
-        }
-      ]
-    ],
+  "expo-font",
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/icon.png",
+      "backgroundColor": "#0f172a",
+      "imageWidth": 200
+    }
+  ],
+  [
+    "expo-build-properties",
+    {
+      "android": {
+        "usesCleartextTraffic": true
+      }
+    }
+  ]
+],
     "android": {
       "package": "com.hector.appcamiones",
       "config": {

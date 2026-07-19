@@ -16,7 +16,9 @@ export default function TrucksScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.fichaText}>{item.ficha} - {item.marca}</Text>
+        <Text style={styles.fichaText}>
+  {item.ficha} - <Text style={styles.marcaText}>{item.marca}</Text>
+</Text>
           <View style={[styles.badge, { backgroundColor: colorEstado + "20", borderColor: colorEstado }]}> 
             <Text style={[styles.badgeText, { color: colorEstado }]}>{item.estado}</Text>
           </View>
@@ -70,6 +72,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#1e293b", padding: 15, borderRadius: 12, marginBottom: 15, borderWidth: 1, borderColor: "#334155" },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   fichaText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  marcaText: { color: "black", backgroundColor: "yellow", fontWeight: "900", fontSize: 20, paddingHorizontal: 4 },
   modeloText: { color: "#94a3b8", fontSize: 15, marginBottom: 5 },
   kmText: { color: "#cbd5e1", fontSize: 14, marginBottom: 12 },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1 },
