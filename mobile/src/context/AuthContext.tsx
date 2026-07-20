@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Direccion de tu servidor (por ahora tu IP local, luego sera tu dominio real)
-export const API_BASE_URL = "http://192.168.100.151:3000";
+export const API_BASE_URL = "http://137.184.48.248:3000";
 
 // Token grabado de fabrica en esta compilacion especifica (cada cliente tiene el suyo)
 const OWNER_TOKEN_BAKED = process.env.EXPO_PUBLIC_OWNER_TOKEN;
