@@ -8,6 +8,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 
+app.use(express.json());
+
 const pool = new Pool({
     user: 'postgres',
     host: 'localhost',
@@ -53,6 +55,89 @@ app.get('/api/mis-camiones', verificarToken, async (req, res) => {
         res.json(resultado.rows);
     } catch (error) {
         res.status(500).json({ error: 'Error obteniendo camiones' });
+    }
+});
+
+// ==================== APAGADO REMOTO DEL CAMION ====================
+// Guardamos aqui la conexion TCP activa de cada camion GT06, usando su IMEI como llave.
+// Asi, cuando alguien pida apagar un camion desde la app, sabemos por cual conexion
+// mandarle el comando (solo funciona si el camion esta conectado/con señal en ese momento).
+const conexionesGT06 = new Map();
+
+let serialComando = 1;
+function proximoSerial() {
+    serialComando = (serialComando + 1) % 0xffff;
+    return serialComando;
+}
+
+// Construye el paquete binario GT06 para mandar un comando de texto al dispositivo
+// (por ejemplo, para cortar el motor via el rele). Formato basado en el protocolo
+// estandar GT06/Concox para el comando 0x80 (comando personalizado).
+// NOTA: esto todavia no se ha probado con hardware real. Cuando llegue el GPS
+// Concox GT06N, es probable que haya que ajustar detalles finos segun su manual.
+function construirComandoGT06(comandoTexto, serial) {
+    const comandoBuffer = Buffer.from(comandoTexto, 'ascii');
+    const banderaServidor = Buffer.from([0x00, 0x00, 0x00, 0x01]);
+
+    const contenido = Buffer.concat([
+        Buffer.from([comandoBuffer.length]),
+        comandoBuffer,
+        banderaServidor,
+    ]);
+
+    const cuerpo = Buffer.concat([
+        Buffer.from([0x80]),
+        contenido,
+        Buffer.from([(serial >> 8) & 0xff, serial & 0xff]),
+    ]);
+
+    const longitudPaquete = cuerpo.length + 2; // +2 por el CRC que va despues
+    const crc = crc16Itu(Buffer.concat([Buffer.from([longitudPaquete]), cuerpo]));
+
+    return Buffer.concat([
+        Buffer.from([0x78, 0x78]),
+        Buffer.from([longitudPaquete]),
+        cuerpo,
+        Buffer.from([(crc >> 8) & 0xff, crc & 0xff]),
+        Buffer.from([0x0d, 0x0a]),
+    ]);
+}
+
+app.post('/api/apagar-camion', verificarToken, async (req, res) => {
+    const { imei } = req.body;
+    if (!imei) {
+        return res.status(400).json({ error: 'Falta el IMEI del camion' });
+    }
+
+    try {
+        // Confirmamos que el camion realmente pertenece a este dueño (seguridad:
+        // que nadie pueda apagar el camion de otro dueño mandando cualquier IMEI)
+        const camionResultado = await pool.query(
+            'SELECT owner_id, velocidad FROM camiones WHERE imei = $1',
+            [imei]
+        );
+
+        if (camionResultado.rows.length === 0) {
+            return res.status(404).json({ error: 'Camion no encontrado' });
+        }
+
+        if (camionResultado.rows[0].owner_id !== req.dueno.owner_id) {
+            return res.status(403).json({ error: 'Este camion no te pertenece' });
+        }
+
+        const socketGPS = conexionesGT06.get(imei);
+        if (!socketGPS) {
+            return res.status(404).json({ error: 'El camion no esta conectado ahora mismo. Intenta cuando tenga señal.' });
+        }
+
+        const comando = construirComandoGT06('DYD,000000#', proximoSerial());
+        socketGPS.write(comando);
+
+        console.log(`🔴 Comando de apagado enviado al camion IMEI: ${imei} (dueño: ${req.dueno.owner_id})`);
+        res.json({ ok: true, mensaje: 'Comando de apagado enviado al camion' });
+    } catch (error) {
+        console.log(`❌ Error enviando comando de apagado: ${error.message}`);
+        res.status(500).json({ error: 'Error de servidor enviando el comando' });
     }
 });
 
@@ -268,6 +353,8 @@ const tcpServerGT06 = net.createServer((socket) => {
                 imeiDeEstaConexion = paquete.imei;
                 console.log(`\n🔐 [GT06] Login recibido, IMEI: ${paquete.imei}`);
                 socket.write(paquete.respuesta);
+                // Guardamos esta conexion para poder mandarle comandos despues (ej. apagado)
+                conexionesGT06.set(paquete.imei, socket);
             } else if (paquete.tipo === 'ubicacion' && imeiDeEstaConexion) {
                 console.log(`⚡ [GT06] Ubicación de IMEI: ${imeiDeEstaConexion}`);
                 await actualizarYNotificar(imeiDeEstaConexion, paquete.latitud, paquete.longitud, paquete.velocidad);
@@ -276,6 +363,13 @@ const tcpServerGT06 = net.createServer((socket) => {
             }
         } catch (error) {
             console.log(`❌ Error procesando paquete GT06: ${error.message}`);
+        }
+    });
+
+    socket.on('close', () => {
+        // Si esta conexion se cierra, la quitamos de la lista de conexiones activas
+        if (imeiDeEstaConexion && conexionesGT06.get(imeiDeEstaConexion) === socket) {
+            conexionesGT06.delete(imeiDeEstaConexion);
         }
     });
 

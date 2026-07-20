@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { io } from 'socket.io-client';
@@ -21,9 +21,10 @@ export default function LiveMapScreen() {
         longitud: camionParam?.longitud || -69.9312,
         velocidad: camionParam?.velocidad || 0,
     });
-    
+
     const [tieneSenal, setTieneSenal] = useState(false);
     const [autenticado, setAutenticado] = useState(false);
+    const [apagando, setApagando] = useState(false);
 
     useEffect(() => {
         if (!user?.token) return;
@@ -57,6 +58,43 @@ export default function LiveMapScreen() {
         };
     }, [imei, nombreCamion, user?.token]);
 
+    const camionDetenido = camion.velocidad === 0;
+
+    const confirmarApagado = () => {
+        Alert.alert(
+            'Apagar camión',
+            `¿Seguro que quieres apagar el motor de ${nombreCamion}? El camión no podrá volver a encender hasta que lo actives de nuevo desde la app.`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Sí, apagar', style: 'destructive', onPress: ejecutarApagado },
+            ]
+        );
+    };
+
+    const ejecutarApagado = async () => {
+        if (!user?.token) return;
+        setApagando(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/apagar-camion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
+                },
+                body: JSON.stringify({ imei }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                Alert.alert('Comando enviado', 'La orden de apagado fue enviada al camión.');
+            } else {
+                Alert.alert('No se pudo apagar', data.error || 'Intenta de nuevo en unos segundos.');
+            }
+        } catch (error) {
+            Alert.alert('Error de conexión', 'No se pudo contactar al servidor.');
+        }
+        setApagando(false);
+    };
+
     return (
         <View style={styles.container}>
             <MapView
@@ -84,6 +122,19 @@ export default function LiveMapScreen() {
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
                 <Text style={styles.backButtonText}>⬅ Volver al Listado</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+                style={[styles.apagarButton, (!camionDetenido || apagando) && styles.apagarButtonDisabled]}
+                onPress={confirmarApagado}
+                disabled={!camionDetenido || apagando}
+            >
+                <Text style={styles.apagarButtonText}>
+                    {apagando ? 'ENVIANDO...' : 'APAGAR'}
+                </Text>
+            </TouchableOpacity>
+            {!camionDetenido && (
+                <Text style={styles.avisoText}>Solo se puede apagar con el camión detenido</Text>
+            )}
 
             <View style={styles.infoBox}>
                 <Text style={styles.truckName}>{nombreCamion}</Text>
@@ -119,6 +170,37 @@ const styles = StyleSheet.create({
     backButtonText: {
         color: '#ffffff',
         fontWeight: 'bold',
+    },
+    apagarButton: {
+        position: 'absolute',
+        top: 50,
+        right: 20,
+        zIndex: 10,
+        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+        paddingVertical: 12,
+        paddingHorizontal: 18,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: '#ef4444',
+    },
+    apagarButtonDisabled: {
+        borderColor: '#475569',
+        opacity: 0.6,
+    },
+    apagarButtonText: {
+        color: '#ef4444',
+        fontWeight: '900',
+        fontSize: 14,
+        letterSpacing: 0.5,
+    },
+    avisoText: {
+        position: 'absolute',
+        top: 92,
+        right: 20,
+        maxWidth: 160,
+        color: '#94a3b8',
+        fontSize: 10,
+        textAlign: 'right',
     },
     infoBox: {
         position: 'absolute',
