@@ -1,11 +1,9 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { io } from 'socket.io-client';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
-
-const socket = io(API_BASE_URL);
+import { socketService } from '../services/socketService';
 
 export default function LiveMapScreen() {
     const route = useRoute<any>();
@@ -14,7 +12,7 @@ export default function LiveMapScreen() {
 
     const camionParam = route?.params?.camion;
     const imei = camionParam?.imei || '352812345678901';
-    const nombreCamion = camionParam ? `${camionParam.ficha} - ${camionParam.marca}` : 'Camión General';
+    const nombreCamion = camionParam ? `${camionParam.ficha} - ${camionParam.marca}` : 'Vehiculo';
 
     const [camion, setCamion] = useState<{ latitud: number; longitud: number; velocidad: number }>({
         latitud: camionParam?.latitud || 18.4861,
@@ -23,40 +21,37 @@ export default function LiveMapScreen() {
     });
 
     const [tieneSenal, setTieneSenal] = useState(false);
-    const [autenticado, setAutenticado] = useState(false);
     const [apagando, setApagando] = useState(false);
+
+    // Handler nombrado, para poder quitar exactamente ESTE listener al salir
+    const manejarActualizacion = useCallback((datos: any) => {
+        if (datos && datos.latitud && datos.longitud) {
+            console.log(`🚚 ¡Coordenada recibida para ${nombreCamion}!`, datos);
+            setCamion({
+                latitud: Number(datos.latitud),
+                longitud: Number(datos.longitud),
+                velocidad: datos.velocidad || 0,
+            });
+            setTieneSenal(true);
+        }
+    }, [nombreCamion]);
 
     useEffect(() => {
         if (!user?.token) return;
 
-        // Nos autenticamos con nuestro token para entrar a nuestra sala privada
-        socket.emit('autenticar', user.token);
-
-        socket.on('autenticado', (respuesta) => {
-            setAutenticado(respuesta.ok);
-            console.log(respuesta.ok ? '🔑 Autenticado en el servidor' : '❌ Token rechazado');
-        });
+        // Conecta y autentica UNA sola vez (si ya estaba conectado, no repite nada)
+        const socket = socketService.conectar(user.token);
 
         const eventoSocket = `camion_${imei}`;
         console.log(`📡 Escuchando en vivo el canal de socket: ${eventoSocket}`);
 
-        socket.on(eventoSocket, (datos) => {
-            if (datos && datos.latitud && datos.longitud) {
-                console.log(`🚚 ¡Coordenada recibida para ${nombreCamion}!`, datos);
-                setCamion({
-                    latitud: Number(datos.latitud),
-                    longitud: Number(datos.longitud),
-                    velocidad: datos.velocidad || 0,
-                });
-                setTieneSenal(true);
-            }
-        });
+        socket.on(eventoSocket, manejarActualizacion);
 
         return () => {
-            socket.off(eventoSocket);
-            socket.off('autenticado');
+            // Solo quita el listener de ESTE camion, nada mas
+            socket.off(eventoSocket, manejarActualizacion);
         };
-    }, [imei, nombreCamion, user?.token]);
+    }, [imei, user?.token, manejarActualizacion]);
 
     const camionDetenido = camion.velocidad === 0;
 
