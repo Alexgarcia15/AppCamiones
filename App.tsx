@@ -14,11 +14,6 @@ export default function App() {
       <AuthProvider>
         <AlertProvider>
           <View style={styles.shell}>
-            <View style={styles.header}>
-              <Text style={styles.title}>App_Camiones</Text>
-              
-            </View>
-
             <View style={styles.content}>
               <AppNavigator />
             </View>
@@ -40,27 +35,6 @@ const styles = StyleSheet.create({
   shell: {
     flex: 1,
     backgroundColor: "#09121f",
-  },
-  header: {
-    paddingTop: 24,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    backgroundColor: "#0f1b2c",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.08)",
-  },
-  title: {
-    color: "#FFD700",
-    fontSize: 34,
-    fontWeight: "900",
-    letterSpacing: -1,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: "#a3b3c6",
-    marginTop: 6,
-    fontSize: 14,
   },
   content: {
     flex: 1,

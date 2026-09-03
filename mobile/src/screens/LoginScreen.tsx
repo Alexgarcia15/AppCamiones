@@ -35,7 +35,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.box}>
-        <Text style={styles.brandText}>App_Camiones</Text>
+        <Text style={styles.brandText}>HECGAR GPS</Text>
 
         <TextInput
           style={styles.input}

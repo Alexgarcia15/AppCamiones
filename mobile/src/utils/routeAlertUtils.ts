@@ -58,9 +58,9 @@ const rutaPermitida: Coordenada[] = [
 
 const METROS_MAX_DESVIO = 450; 
 
-// ðŸšš AQUÃ ESTÃN LAS 10 FICHAS REALES DE JUAN PÃ‰REZ (owner-1) + LAS DE LOS DEMÃS DUEÃ‘OS
+// 🚚 AQUÍ ESTÁN LAS 10 FICHAS REALES DE JUAN PÉREZ (owner-1) + LAS DE LOS DEMÁS DUEÑOS
 export const datosCamiones: Camion[] = [
-  // --- FLOTA JUAN PÃ‰REZ (owner-1) : 10 CAMIONES ---
+  // --- FLOTA JUAN PÉREZ (owner-1) : 10 CAMIONES ---
   {
     id: "1",
     ownerId: "juan",
@@ -202,7 +202,7 @@ export const datosCamiones: Camion[] = [
     fechaVencimientoSeguro: new Date(new Date().setDate(new Date().getDate() + 60)).toISOString().split("T")[0],
   },
 
-  // --- OTROS DUEÃ‘OS ---
+  // --- OTROS DUEÑOS ---
   {
     id: "11",
     ownerId: "ana",
@@ -340,10 +340,10 @@ export function detectarDesvio(camion: Camion): AlertaRuta | null {
     return {
       id: `alerta-${camion.id}`,
       camion,
-      mensaje: `Unidad ${camion.ficha} se saliÃ³ de la ruta permitida.`,
+      mensaje: `Unidad ${camion.ficha} se salió de la ruta permitida.`,
       telefonoPropietario: "+18295581414",
       coordenadas: ubicacion,
-      direccion: "Av. Las AmÃ©ricas, cerca del tramo Haina-Puerto",
+      direccion: "Av. Las Américas, cerca del tramo Haina-Puerto",
       carretera: "Autopista Duarte",
       fecha: new Date().toISOString(),
     };
@@ -408,7 +408,7 @@ export function detectarVencimientoSeguro(camion: Camion): AlertaSeguro | null {
     return {
       id: `seguro-${camion.id}`,
       camion,
-      mensaje: `El camiÃ³n ficha ${camion.ficha} se le vence el seguro en ${diasFaltantes} dÃ­a${diasFaltantes === 1 ? "" : "s"}.`,
+      mensaje: `El camión ficha ${camion.ficha} se le vence el seguro en ${diasFaltantes} día${diasFaltantes === 1 ? "" : "s"}.`,
       telefonoPropietario: "+18295581414",
       diasParaVencer: diasFaltantes,
       fecha: new Date().toISOString(),

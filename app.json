@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "AppCamiones",
-    "description": "",
+        "name": "HECGAR GPS",
+    "description": "Sistema de Monitoreo Vehicular",
+    
     "slug": "appcamiones-nueva",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",

@@ -25,7 +25,7 @@ export default function DashboardScreen() {
         
         <View style={styles.titleWrapper}>
           <Text style={styles.ownerNameText}>{user?.name ? user.name.split(" ")[0] + " " + (user.name.split(" ")[1] || "") : "Dueño"}</Text>
-          <Text style={styles.truckCountSubtitle}>{trucks.length} Camiones</Text>
+          <Text style={styles.truckCountSubtitle}>{trucks.length} Vehículos</Text>
         </View>
         
         <View style={{ width: 40 }} /> 
@@ -35,7 +35,7 @@ export default function DashboardScreen() {
 
       <View style={styles.listaCamiones}>
         {trucks.length === 0 ? (
-          <Text style={styles.noTrucksText}>No tienes camiones asignados a esta flota.</Text>
+          <Text style={styles.noTrucksText}>No tienes vehículos asignados a esta flota.</Text>
         ) : (
           trucks.map((camion: any) => (
             <TouchableOpacity 

@@ -21,7 +21,7 @@ function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      <Text style={styles.subtitle}>Plataforma Satelital de Monitoreo y Gestion de Flota de Camiones</Text>
+      <Text style={styles.subtitle}>Sistema de Monitoreo Vehicular</Text>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleEntrar}>
           <Text style={styles.buttonText}>Ver en Tiempo Real</Text>
