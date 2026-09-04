@@ -14,6 +14,7 @@ function HomeScreen() {
   };
   return (
     <View style={styles.container}>
+      <Text style={styles.brandText}>HECGAR GPS</Text>
       <View style={styles.imageContainer}>
         <Image
           source={require('../../../assets/camion_frente.png')}
@@ -21,7 +22,7 @@ function HomeScreen() {
           resizeMode="cover"
         />
       </View>
-      <Text style={styles.subtitle}>Sistema de Monitoreo Vehicular</Text>
+      <Text style={styles.subtitle}>Sistema de Monitoreo Satelital</Text>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleEntrar}>
           <Text style={styles.buttonText}>Ver en Tiempo Real</Text>
@@ -38,13 +39,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+  brandText: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#FFE082",
+    letterSpacing: -1,
+    textAlign: "center",
+    marginBottom: 16,
+  },
   imageContainer: {
     width: '100%',
     height: 250,
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 30,
-    marginTop: -30,
     backgroundColor: '#1e293b',
   },
   headerImage: {
@@ -53,7 +61,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: "#94a3b8",
+    color: "#FFE082",
     textAlign: "center",
     marginBottom: 40,
   },

@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Image,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 
@@ -34,9 +35,15 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.box}>
-        <Text style={styles.brandText}>HECGAR GPS</Text>
+      <View style={styles.imageContainer}>
+        <Image
+          source={require('../../../assets/camion_frente.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
+      </View>
 
+      <View style={styles.box}>
         <TextInput
           style={styles.input}
           placeholder="Codigo de acceso"
@@ -66,6 +73,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
+  imageContainer: {
+    width: '100%',
+    height: 220,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 24,
+    backgroundColor: '#1e293b',
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
+  },
   box: {
     backgroundColor: "#111827",
     borderRadius: 20,
@@ -74,15 +93,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
-  },
-  brandText: {
-    fontSize: 40,
-    fontWeight: "900",
-    color: "#FFD700",
-    letterSpacing: -1,
-    textAlign: "center",
-    marginBottom: 28,
-    marginTop: 10,
   },
   input: {
     backgroundColor: "#1e293b",

@@ -57,8 +57,8 @@ export default function LiveMapScreen() {
 
     const confirmarApagado = () => {
         Alert.alert(
-            'Apagar camión',
-            `¿Seguro que quieres apagar el motor de ${nombreCamion}? El camión no podrá volver a encender hasta que lo actives de nuevo desde la app.`,
+            'Apagar el Vehículo',
+            '¿Seguro que quieres apagar el motor del Vehículo? El Vehículo no podrá volver a encender hasta que lo actives de nuevo desde la app.',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 { text: 'Sí, apagar', style: 'destructive', onPress: ejecutarApagado },

@@ -122,7 +122,7 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
         }
 
         if (camionResultado.rows[0].owner_id !== req.dueno.owner_id) {
-            return res.status(403).json({ error: 'Este camion no te pertenece' });
+            return res.status(403).json({ error: 'Este vehículo no te pertenece' });
         }
 
         const socketGPS = conexionesGT06.get(imei);

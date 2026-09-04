@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 
@@ -17,7 +17,15 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      
+
+      <View style={styles.imageContainer}>
+        <Image
+          source={require('../../../assets/camion_frente.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        />
+      </View>
+
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={handleLogout} style={styles.homeButton}>
           <Text style={styles.homeButtonText}>⟸</Text>
@@ -81,6 +89,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     paddingTop: 40,
     paddingBottom: 30,
+  },
+  imageContainer: {
+    width: '100%',
+    height: 160,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 20,
+    backgroundColor: '#1e293b',
+  },
+  headerImage: {
+    width: '100%',
+    height: '100%',
   },
   headerContainer: {
     flexDirection: "row",
