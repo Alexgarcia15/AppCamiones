@@ -127,7 +127,7 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
 
         const socketGPS = conexionesGT06.get(imei);
         if (!socketGPS) {
-            return res.status(404).json({ error: 'El camion no esta conectado ahora mismo. Intenta cuando tenga señal.' });
+            return res.status(404).json({ error: 'El vehículo no está conectado ahora mismo. Intenta cuando tenga señal.' });
         }
 
         const comando = construirComandoGT06('DYD,000000#', proximoSerial());
