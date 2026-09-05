@@ -5,15 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
-  const { user, trucks, logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      Alert.alert("Error", "No se pudo desvincular el dispositivo.");
-    }
-  };
+  const { user, trucks } = useAuth();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -27,7 +19,7 @@ export default function DashboardScreen() {
       </View>
 
       <View style={styles.headerContainer}>
-        <TouchableOpacity onPress={handleLogout} style={styles.homeButton}>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.homeButton}>
           <Text style={styles.homeButtonText}>⟸</Text>
         </TouchableOpacity>
         

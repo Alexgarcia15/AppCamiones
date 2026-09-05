@@ -7,6 +7,12 @@
         "buildType": "apk"
       }
     },
+    "development-hector": {
+      "extends": "development",
+      "env": {
+        "EXPO_PUBLIC_OWNER_TOKEN": "HECTOR01"
+      }
+    },
     "preview": {
       "android": {
         "buildType": "apk"
@@ -15,7 +21,7 @@
     "preview-hector": {
       "extends": "preview",
       "env": {
-        "EXPO_PUBLIC_OWNER_TOKEN": "hct_7f3a9b2e1d4c8f6a5b0e9d2c1a8f7e6b"
+        "EXPO_PUBLIC_OWNER_TOKEN": "HECTOR01"
       }
     },
     "preview-nini": {

@@ -42,10 +42,11 @@ const styles = StyleSheet.create({
   brandText: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#FFE082",
+    color: "#ffff00",
     letterSpacing: -1,
     textAlign: "center",
     marginBottom: 16,
+    transform: [{ translateY: -63 }],
   },
   imageContainer: {
     width: '100%',
@@ -61,7 +62,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    color: "#FFE082",
+    color: "#ffff00",
     textAlign: "center",
     marginBottom: 40,
   },
