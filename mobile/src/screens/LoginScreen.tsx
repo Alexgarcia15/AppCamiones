@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -41,13 +41,14 @@ export default function LoginScreen() {
           style={styles.headerImage}
           resizeMode="cover"
         />
+        <View style={styles.imageFrameAccent} />
       </View>
 
       <View style={styles.box}>
         <TextInput
           style={styles.input}
           placeholder="Codigo de acceso"
-          placeholderTextColor="#94a3b8"
+          placeholderTextColor="#7a7a7a"
           value={clientCode}
           autoCapitalize="none"
           onChangeText={setClientCode}
@@ -58,65 +59,101 @@ export default function LoginScreen() {
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={loading}
+          activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>{loading ? "Verificando..." : "Activar"}</Text>
+          <Text style={[styles.buttonText, loading && styles.buttonTextDisabled]}>
+            {loading ? "VERIFICANDO..." : "ACTIVAR"}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
+const YELLOW = "#FFD500";
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
     justifyContent: "center",
     padding: 24,
   },
   imageContainer: {
     width: '100%',
     height: 220,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 24,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111111',
+    borderWidth: 2,
+    borderColor: YELLOW,
+    shadowColor: YELLOW,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
   headerImage: {
     width: '100%',
     height: '100%',
   },
+  imageFrameAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: YELLOW,
+  },
   box: {
-    backgroundColor: "#111827",
+    backgroundColor: "#111111",
     borderRadius: 20,
     padding: 24,
+    borderWidth: 2,
+    borderColor: YELLOW,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 20,
   },
   input: {
-    backgroundColor: "#1e293b",
-    color: "#f8fafc",
+    backgroundColor: "#000000",
+    color: "#ffffff",
     borderRadius: 12,
     padding: 14,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#4d4d4d",
     fontSize: 16,
   },
   button: {
-    backgroundColor: "#0b54f3",
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: YELLOW,
+    paddingVertical: 17,
+    paddingHorizontal: 20,
+    borderRadius: 14,
     alignItems: "center",
-    marginTop: 8,
+    borderWidth: 2,
+    borderColor: "#000000",
+    shadowColor: YELLOW,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 6,
   },
   buttonDisabled: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#1a1a1a",
+    borderColor: YELLOW,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 16,
+    color: "#000000",
+    fontWeight: "900",
+    fontSize: 17,
+    letterSpacing: 0.8,
+  },
+  buttonTextDisabled: {
+    color: YELLOW,
   },
 });
