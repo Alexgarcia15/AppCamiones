@@ -1,81 +1,141 @@
-﻿import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Image } from "react-native";
+import React, { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Alert,
+  Image,
+  TextInput,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth } from "../context/AuthContext";
+import { useAuth, Camion } from "../context/AuthContext";
+
+const YELLOW = "#FFD500";
+
+const colorEstado = (estado: string) =>
+  estado === "En Ruta" ? "#22c55e" :
+  estado === "Mantenimiento" ? "#ef4444" : "#eab308";
 
 export default function DashboardScreen() {
   const navigation = useNavigation<any>();
-  const { user, trucks } = useAuth();
+  const { user, trucks, refreshTrucks } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshTrucks();
+    setRefreshing(false);
+  };
 
+  const trucksFiltrados = useMemo(() => {
+    if (!busqueda.trim()) return trucks;
+    const q = busqueda.trim().toLowerCase();
+    return trucks.filter((c: Camion) =>
+      c.ficha?.toLowerCase().includes(q) ||
+      c.marca?.toLowerCase().includes(q) ||
+      c.modelo?.toLowerCase().includes(q)
+    );
+  }, [trucks, busqueda]);
+
+  const irAMapa = (camion: Camion) => {
+    if (camion.latitud && camion.longitud) {
+      navigation.navigate("LiveMap", { camion });
+    } else {
+      Alert.alert("Error", "Coordenadas GPS no disponibles para esta unidad.");
+    }
+  };
+
+  const renderHeader = () => (
+    <>
       <View style={styles.imageContainer}>
         <Image
           source={require('../../../assets/camion_frente.png')}
           style={styles.headerImage}
           resizeMode="cover"
         />
+        <View style={styles.imageFrameAccent} />
       </View>
 
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.homeButton}>
           <Text style={styles.homeButtonText}>⟸</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.titleWrapper}>
-          <Text style={styles.ownerNameText}>{user?.name ? user.name.split(" ")[0] + " " + (user.name.split(" ")[1] || "") : "Dueño"}</Text>
-          <Text style={styles.truckCountSubtitle}>{trucks.length} Vehículos</Text>
+          <Text style={styles.ownerNameText}>
+            {user?.name ? user.name.split(" ")[0] + " " + (user.name.split(" ")[1] || "") : "Dueño"}
+          </Text>
+          <Text style={styles.truckCountSubtitle}>
+            {trucks.length} {trucks.length === 1 ? "Vehículo" : "Vehículos"}
+          </Text>
         </View>
-        
-        <View style={{ width: 40 }} /> 
+
+        <View style={{ width: 40 }} />
       </View>
 
       <Text style={styles.instructionText}>TOCA UNA FICHA PARA VER EN TIEMPO REAL</Text>
 
-      <View style={styles.listaCamiones}>
-        {trucks.length === 0 ? (
-          <Text style={styles.noTrucksText}>No tienes vehículos asignados a esta flota.</Text>
-        ) : (
-          trucks.map((camion: any) => (
-            <TouchableOpacity 
-              key={camion.id} 
-              style={styles.truckCard}
-              onPress={() => {
-                if (camion.latitud && camion.longitud) {
-                  navigation.navigate("LiveMap", { 
-                    imei: camion.imei || camion.id, 
-                    nombreCamion: `Ficha ${camion.ficha}` 
-                  });
-                } else {
-                  Alert.alert("Error", "Coordenadas GPS no disponibles para esta unidad.");
-                }
-              }}
-            >
-              <View style={styles.truckInfoLeft}>
-                <Text style={styles.truckIcon}>🚚</Text>
-                <View style={styles.textContainer}>
-                  <Text style={styles.truckNameText}>Ficha {camion.ficha}</Text>
-                  <Text style={styles.truckDetailText} numberOfLines={1}>{camion.marca} {camion.modelo}</Text>
-                </View>
-              </View>
+      {trucks.length > 5 && (
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por placa, marca o modelo..."
+          placeholderTextColor="#7a7a7a"
+          value={busqueda}
+          onChangeText={setBusqueda}
+          autoCapitalize="none"
+        />
+      )}
+    </>
+  );
 
-              <View style={styles.truckStatusRight}>
-                <Text style={styles.verMapaText}>Ver mapa 📍</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
+  return (
+    <FlatList
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      data={trucksFiltrados}
+      keyExtractor={(item) => String(item.id)}
+      ListHeaderComponent={renderHeader}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={YELLOW} colors={[YELLOW]} />
+      }
+      ListEmptyComponent={
+        <Text style={styles.noTrucksText}>
+          {trucks.length === 0
+            ? "No tienes vehículos asignados a esta flota."
+            : "Ningún vehículo coincide con tu búsqueda."}
+        </Text>
+      }
+      renderItem={({ item: camion }) => (
+        <TouchableOpacity style={styles.truckCard} onPress={() => irAMapa(camion)}>
+          <View style={styles.truckAccentBar} />
+          <View style={styles.truckInfoLeft}>
+            <Text style={styles.truckIcon}>🚚</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.truckNameText}>Ficha {camion.ficha}</Text>
+              <Text style={styles.truckDetailText} numberOfLines={1}>{camion.marca} {camion.modelo}</Text>
+            </View>
+          </View>
 
-    </ScrollView>
+          <View style={styles.truckStatusRight}>
+            <View style={[styles.statusDot, { backgroundColor: colorEstado(camion.estado) }]} />
+            <Text style={[styles.verMapaText, { color: colorEstado(camion.estado) }]} numberOfLines={1}>
+              {camion.estado || "Ver mapa"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      )}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#000000",
   },
   content: {
     paddingHorizontal: 15,
@@ -85,14 +145,29 @@ const styles = StyleSheet.create({
   imageContainer: {
     width: '100%',
     height: 160,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 20,
-    backgroundColor: '#1e293b',
+    backgroundColor: '#111111',
+    borderWidth: 2,
+    borderColor: YELLOW,
+    shadowColor: YELLOW,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 8,
   },
   headerImage: {
     width: '100%',
     height: '100%',
+  },
+  imageFrameAccent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: YELLOW,
   },
   headerContainer: {
     flexDirection: "row",
@@ -106,12 +181,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#334155",
-    backgroundColor: "#1f2937",
+    borderColor: YELLOW,
+    backgroundColor: "#111111",
   },
   homeButtonText: {
     fontSize: 24,
-    color: "#f43f5e",
+    color: YELLOW,
     fontWeight: "900",
   },
   titleWrapper: {
@@ -122,46 +197,63 @@ const styles = StyleSheet.create({
   ownerNameText: {
     fontSize: 26,
     fontWeight: "900",
-    color: "#ffffff",
+    color: YELLOW,
     textAlign: "center",
   },
   truckCountSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#38bdf8",
+    color: "#e5e5e5",
     marginTop: 4,
     textAlign: "center",
   },
   instructionText: {
     fontSize: 11,
     fontWeight: "bold",
-    color: "#0ef860",
+    color: YELLOW,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 16,
     marginTop: 12,
     letterSpacing: 0.5,
+    opacity: 0.85,
   },
-  listaCamiones: {
-    width: "100%",
-    marginBottom: 25,
+  searchInput: {
+    backgroundColor: "#111111",
+    color: "#ffffff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: YELLOW,
+    fontSize: 14,
   },
   truckCard: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#111111",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 14,
     borderRadius: 14,
     marginBottom: 10,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#2a2a2a",
     width: "100%",
+  },
+  truckAccentBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: YELLOW,
   },
   truckInfoLeft: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     marginRight: 10,
+    marginLeft: 6,
   },
   textContainer: {
     flex: 1,
@@ -171,37 +263,39 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   truckNameText: {
-    color: "#ffffff",
+    color: YELLOW,
     fontSize: 15,
     fontWeight: "bold",
   },
   truckDetailText: {
-    color: "#FFE082",
+    color: "#c9c9c9",
     fontSize: 14,
     marginTop: 2,
     fontWeight: "600",
   },
-  
-  
   truckStatusRight: {
-    backgroundColor: "#0b54f32b",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#0b54f3",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#1a1a1a",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     minWidth: 90,
+    justifyContent: "center",
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
   verMapaText: {
-    color: "#38bdf8",
     fontSize: 12,
     fontWeight: "bold",
   },
   noTrucksText: {
     color: "#94a3b8",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 30,
   },
 });
