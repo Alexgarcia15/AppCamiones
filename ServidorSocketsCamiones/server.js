@@ -295,7 +295,15 @@ function procesarPaqueteGT06(buffer) {
     }
 
     if (protocolo === 0x13) {
-        return { tipo: 'heartbeat', respuesta: construirRespuestaGT06(0x13, serial) };
+        // DIAGNOSTICO TEMPORAL: capturamos el cuerpo crudo del paquete de estado
+        // para identificar en que byte/bit viene el estado de ACC (encendido) en
+        // este modelo de rastreador, antes de implementar la deteccion real.
+        const contenido = buffer.slice(4, buffer.length - 6);
+        return {
+            tipo: 'heartbeat',
+            cuerpoHex: contenido.toString('hex'),
+            respuesta: construirRespuestaGT06(0x13, serial),
+        };
     }
 
     return { tipo: 'desconocido' };
@@ -359,6 +367,8 @@ const tcpServerGT06 = net.createServer((socket) => {
                 console.log(`⚡ [GT06] Ubicación de IMEI: ${imeiDeEstaConexion}`);
                 await actualizarYNotificar(imeiDeEstaConexion, paquete.latitud, paquete.longitud, paquete.velocidad);
             } else if (paquete.tipo === 'heartbeat') {
+                // DIAGNOSTICO TEMPORAL: quitar este log una vez identificado el bit de ACC
+                console.log(`📟 [GT06] Estado (0x13) de IMEI ${imeiDeEstaConexion}, cuerpo hex: ${paquete.cuerpoHex}`);
                 socket.write(paquete.respuesta);
             }
         } catch (error) {
