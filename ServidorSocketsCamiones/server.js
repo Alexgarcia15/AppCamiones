@@ -58,6 +58,26 @@ app.get('/api/mis-camiones', verificarToken, async (req, res) => {
     }
 });
 
+// Guarda (o refresca) el push token de Expo del dispositivo del dueño que
+// llama, para poder mandarle notificaciones con la app cerrada.
+app.post('/api/registrar-push-token', verificarToken, async (req, res) => {
+    const { token } = req.body || {};
+    if (!token) {
+        return res.status(400).json({ error: 'Falta el token de push' });
+    }
+    try {
+        await pool.query(
+            `INSERT INTO push_tokens (owner_id, token, updated_at)
+             VALUES ($1, $2, NOW())
+             ON CONFLICT (owner_id, token) DO UPDATE SET updated_at = NOW()`,
+            [req.dueno.owner_id, token]
+        );
+        res.json({ ok: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Error guardando el token de push' });
+    }
+});
+
 // ==================== APAGADO REMOTO DEL CAMION ====================
 // Guardamos aqui la conexion TCP activa de cada camion GT06, usando su IMEI como llave.
 // Asi, cuando alguien pida apagar un camion desde la app, sabemos por cual conexion
@@ -141,11 +161,71 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
     }
 });
 
+// ==================== ALERTAS: PERSISTENCIA + PUSH (Etapa A, compartida por las 4 alertas) ====================
+// Titulo de la notificacion push segun el tipo de alerta.
+function tituloPorTipoAlerta(tipo) {
+    switch (tipo) {
+        case 'velocidad': return '🚨 Exceso de velocidad';
+        case 'ruta': return '🚨 Fuera de ruta';
+        case 'encendido': return '🔧 Motor encendido';
+        case 'apagado': return '🔧 Motor apagado';
+        default: return '🚨 Alerta de flota';
+    }
+}
+
+// Manda un push (Expo Push API) a todos los dispositivos registrados de un dueño.
+async function enviarPush(ownerId, titulo, mensaje, datosExtra) {
+    try {
+        const tokens = await pool.query('SELECT token FROM push_tokens WHERE owner_id = $1', [ownerId]);
+        if (tokens.rows.length === 0) return;
+
+        const mensajes = tokens.rows.map((fila) => ({
+            to: fila.token,
+            sound: 'default',
+            title: titulo,
+            body: mensaje,
+            data: datosExtra || {},
+        }));
+
+        await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(mensajes),
+        });
+    } catch (error) {
+        console.log(`❌ Error enviando push: ${error.message}`);
+    }
+}
+
+// Punto unico por el que pasan las 4 alertas (velocidad, ruta, encendido, apagado):
+// guarda el historial, notifica por Socket.IO a quien tenga la app abierta, y
+// ademas manda push a quien la tenga cerrada.
+async function dispararAlerta(ownerId, imei, tipo, mensaje, datosExtra) {
+    try {
+        await pool.query(
+            `INSERT INTO alertas (owner_id, imei, tipo, mensaje, fecha) VALUES ($1, $2, $3, $4, $5)`,
+            [ownerId, imei, tipo, mensaje, new Date()]
+        );
+
+        io.to(ownerId).emit('alerta', { imei, tipo, mensaje, fecha: new Date().toISOString(), ...datosExtra });
+        console.log(`🔔 Alerta "${tipo}" para IMEI ${imei} (dueño ${ownerId}): ${mensaje}`);
+
+        await enviarPush(ownerId, tituloPorTipoAlerta(tipo), mensaje, { tipo, imei, ...datosExtra });
+    } catch (error) {
+        console.log(`❌ Error disparando alerta: ${error.message}`);
+    }
+}
+
 // ==================== FUNCION COMPARTIDA: GUARDAR Y NOTIFICAR ====================
+const VELOCIDAD_MAX_PERMITIDA = 80;
+// Ultima velocidad conocida por IMEI, para disparar la alerta solo al CRUZAR
+// el umbral (no en cada paquete mientras se mantiene arriba de 80).
+const ultimaVelocidadConocida = new Map();
+
 async function actualizarYNotificar(imei, latitud, longitud, velocidad) {
     try {
         const resultadoCamion = await pool.query(
-            'UPDATE camiones SET latitud = $1, longitud = $2, velocidad = $3 WHERE imei = $4 RETURNING owner_id',
+            'UPDATE camiones SET latitud = $1, longitud = $2, velocidad = $3 WHERE imei = $4 RETURNING owner_id, ficha',
             [latitud, longitud, velocidad, imei]
         );
 
@@ -156,9 +236,21 @@ async function actualizarYNotificar(imei, latitud, longitud, velocidad) {
         );
 
         if (resultadoCamion.rows.length > 0) {
-            const ownerId = resultadoCamion.rows[0].owner_id;
+            const { owner_id: ownerId, ficha } = resultadoCamion.rows[0];
             io.to(ownerId).emit(`camion_${imei}`, { imei, latitud, longitud, velocidad });
             console.log(`💾 Ubicación actualizada y enviada a la sala de "${ownerId}"`);
+
+            const velocidadAnterior = ultimaVelocidadConocida.get(imei) ?? 0;
+            ultimaVelocidadConocida.set(imei, velocidad);
+            if (velocidadAnterior <= VELOCIDAD_MAX_PERMITIDA && velocidad > VELOCIDAD_MAX_PERMITIDA) {
+                await dispararAlerta(
+                    ownerId,
+                    imei,
+                    'velocidad',
+                    `Unidad ${ficha} circula a ${velocidad} kph y supera los ${VELOCIDAD_MAX_PERMITIDA} kph.`,
+                    { velocidad, latitud, longitud }
+                );
+            }
         } else {
             console.log(`⚠️ IMEI ${imei} no está registrado a ningún dueño`);
         }

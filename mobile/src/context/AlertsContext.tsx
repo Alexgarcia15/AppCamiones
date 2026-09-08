@@ -2,12 +2,25 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Audio } from 'expo-av';
 import { Vibration } from 'react-native';
 import { beepService } from '../services/beepService';
+import { useAuth } from './AuthContext';
+import { socketService } from '../services/socketService';
+
+type TipoAlerta = 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion' | 'apagado';
 
 interface AlertContextType {
   activeAlert: { type: string; message: string; infinite: boolean } | null;
-  triggerAlert: (type: 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion', kmFaltantes?: number) => void;
+  triggerAlert: (type: TipoAlerta, kmFaltantes?: number, mensajePersonalizado?: string) => void;
   dismissAlert: () => void;
 }
+
+// Mapea el "tipo" que manda el servidor (server.js: dispararAlerta) al tipo de
+// alerta local. Un solo listener global cubre las 4 alertas del plan unificado.
+const TIPO_SERVIDOR_A_ALERTA: Record<string, TipoAlerta> = {
+  ruta: 'ruta',
+  velocidad: 'velocidad',
+  encendido: 'ignicion',
+  apagado: 'apagado',
+};
 
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
@@ -117,8 +130,31 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }
 
+  const { user } = useAuth();
+
+  // Listener global unico: mientras el socket este autenticado, cualquier
+  // alerta que dispare el servidor (velocidad, ruta, encendido, apagado)
+  // llega aqui sin importar en que pantalla este el dueño.
+  useEffect(() => {
+    if (!user) return;
+    const socket = socketService.getSocket();
+    if (!socket) return;
+
+    const manejarAlertaDelServidor = (payload: { tipo: string; mensaje: string }) => {
+      const tipoAlerta = TIPO_SERVIDOR_A_ALERTA[payload.tipo];
+      if (tipoAlerta) {
+        triggerAlert(tipoAlerta, undefined, payload.mensaje);
+      }
+    };
+
+    socket.on('alerta', manejarAlertaDelServidor);
+    return () => {
+      socket.off('alerta', manejarAlertaDelServidor);
+    };
+  }, [user]);
+
   // Se tipó la entrada estrictamente para cumplir con AlertContextType
-  const triggerAlert = (type: 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion', kmFaltantes?: number) => {
+  const triggerAlert = (type: TipoAlerta, kmFaltantes?: number, mensajePersonalizado?: string) => {
     let message = "";
     let infinite = false;
     let duration = 0;
@@ -129,7 +165,7 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         infinite = true;
         break;
       case 'velocidad':
-        message = "¡ALERTA DE VELOCIDAD! Unidad excedió los 90 KPH.";
+        message = "¡ALERTA DE VELOCIDAD! Unidad excedió los 80 KPH.";
         infinite = true;
         break;
       case 'aceite':
@@ -152,10 +188,19 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         infinite = false;
         duration = 4000; // 4 segundos exactos
         break;
+      case 'apagado':
+        message = "Notificación: Motor apagado.";
+        infinite = false;
+        duration = 4000;
+        break;
+    }
+
+    if (mensajePersonalizado) {
+      message = mensajePersonalizado;
     }
 
     console.log(`🔔 ALERTA DISPARADA: ${type} - ${message}`);
-    
+
     setActiveAlert({ type, message, infinite });
     
     // Ejecutar vibración de forma segura

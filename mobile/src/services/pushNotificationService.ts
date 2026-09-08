@@ -1,0 +1,70 @@
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+import { API_BASE_URL } from '../context/AuthContext';
+
+// Que las notificaciones que lleguen con la app abierta tambien se muestren
+// como banner del sistema (ademas del banner propio de AlertsContext).
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function obtenerExpoPushToken(): Promise<string | null> {
+  if (!Device.isDevice) {
+    console.log('⚠️ Push notifications requieren un dispositivo fisico (no emulador/web).');
+    return null;
+  }
+
+  const permisoActual = await Notifications.getPermissionsAsync();
+  let estadoFinal = permisoActual.status;
+
+  if (estadoFinal !== 'granted') {
+    const solicitado = await Notifications.requestPermissionsAsync();
+    estadoFinal = solicitado.status;
+  }
+
+  if (estadoFinal !== 'granted') {
+    console.log('⚠️ Permiso de notificaciones no concedido.');
+    return null;
+  }
+
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Alertas de flota',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+  const resultado = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId } : undefined
+  );
+  return resultado.data;
+}
+
+export async function registrarPushToken(ownerToken: string): Promise<void> {
+  try {
+    const expoPushToken = await obtenerExpoPushToken();
+    if (!expoPushToken) return;
+
+    await fetch(`${API_BASE_URL}/api/registrar-push-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ownerToken}`,
+      },
+      body: JSON.stringify({ token: expoPushToken }),
+    });
+    console.log('🔔 Push token registrado en el servidor.');
+  } catch (error) {
+    console.log('Error registrando push token:', error);
+  }
+}

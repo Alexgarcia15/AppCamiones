@@ -1,5 +1,7 @@
 ﻿import React, { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { socketService } from "../services/socketService";
+import { registrarPushToken } from "../services/pushNotificationService";
 
 // Direccion de tu servidor (por ahora tu IP local, luego sera tu dominio real)
 export const API_BASE_URL = "http://137.184.48.248:3000";
@@ -54,6 +56,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const perfil = await perfilRes.json();
       setUser({ ownerId: perfil.ownerId, name: perfil.nombre, token });
 
+      // Conectar el socket UNA sola vez aqui (no en cada pantalla) para que las
+      // alertas en vivo lleguen sin importar donde este navegando el dueño, y
+      // registrar el push token para que tambien lleguen con la app cerrada.
+      socketService.conectar(token);
+      registrarPushToken(token);
+
       const camionesRes = await fetch(`${API_BASE_URL}/api/mis-camiones`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -101,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await AsyncStorage.removeItem("@owner_token");
+    socketService.desconectar();
     setUser(null);
     setTrucks([]);
   };
