@@ -3,23 +3,23 @@ import { Audio } from 'expo-av';
 class BeepService {
   private beepSound: Audio.Sound | null = null;
 
-  async playBeep(frequency: number = 1000, duration: number = 400) {
+  async playBeep(frequency: number = 1000, duration: number = 400, volume: number = 1.0) {
     try {
       // Crear un pequeño tono WAV en base64 (tono de 1kHz, 400ms)
       // Este es un tono muy simple que funciona sin archivos externos
       const waveData = this.generateBeepWave(frequency, duration);
-      
+
       if (this.beepSound) {
         await this.beepSound.unloadAsync();
       }
 
       this.beepSound = new Audio.Sound();
-      
+
       await this.beepSound.loadAsync({
         uri: `data:audio/wav;base64,${waveData}`,
       });
 
-      await this.beepSound.setVolumeAsync(1.0);
+      await this.beepSound.setVolumeAsync(volume);
       await this.beepSound.playAsync();
 
       // Auto-cleanup después del tono
@@ -32,16 +32,16 @@ class BeepService {
     }
   }
 
-  async playRepeatingBeep(frequency: number = 1000, beepDuration: number = 500, repeatCount: number = 3, pauseBetween: number = 200) {
+  async playRepeatingBeep(frequency: number = 1000, beepDuration: number = 500, repeatCount: number = 3, pauseBetween: number = 200, volume: number = 1.0) {
     for (let i = 0; i < repeatCount; i++) {
-      await this.playBeep(frequency, beepDuration);
+      await this.playBeep(frequency, beepDuration, volume);
       if (i < repeatCount - 1) {
         await new Promise(resolve => setTimeout(resolve, pauseBetween));
       }
     }
   }
 
-  async playLoopingBeep(frequency: number = 1000, duration: number = 600) {
+  async playLoopingBeep(frequency: number = 1000, duration: number = 600, volume: number = 1.0) {
     try {
       if (this.beepSound) {
         await this.beepSound.unloadAsync();
@@ -53,7 +53,7 @@ class BeepService {
         uri: `data:audio/wav;base64,${waveData}`,
       });
 
-      await this.beepSound.setVolumeAsync(1.0);
+      await this.beepSound.setVolumeAsync(volume);
       await this.beepSound.setIsLoopingAsync(true);
       await this.beepSound.playAsync();
     } catch (error) {

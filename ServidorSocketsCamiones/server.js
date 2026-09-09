@@ -90,11 +90,16 @@ function proximoSerial() {
     return serialComando;
 }
 
+// Comandos de texto GT06/Coban para el rele que corta/restaura el motor.
+// NOTA: ninguno de los dos se ha probado todavia con hardware real. Cuando
+// se pruebe con el GPS fisico, confirmar contra el manual del TK403/GT06N
+// que estos son los comandos correctos para ESE modelo especifico.
+const COMANDO_GT06_CORTAR_MOTOR = 'DYD,000000#';
+const COMANDO_GT06_RESTAURAR_MOTOR = 'HFYD,000000#';
+
 // Construye el paquete binario GT06 para mandar un comando de texto al dispositivo
 // (por ejemplo, para cortar el motor via el rele). Formato basado en el protocolo
 // estandar GT06/Concox para el comando 0x80 (comando personalizado).
-// NOTA: esto todavia no se ha probado con hardware real. Cuando llegue el GPS
-// Concox GT06N, es probable que haya que ajustar detalles finos segun su manual.
 function construirComandoGT06(comandoTexto, serial) {
     const comandoBuffer = Buffer.from(comandoTexto, 'ascii');
     const banderaServidor = Buffer.from([0x00, 0x00, 0x00, 0x01]);
@@ -133,7 +138,7 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
         // Confirmamos que el camion realmente pertenece a este dueño (seguridad:
         // que nadie pueda apagar el camion de otro dueño mandando cualquier IMEI)
         const camionResultado = await pool.query(
-            'SELECT owner_id, velocidad FROM camiones WHERE imei = $1',
+            'SELECT owner_id, ficha FROM camiones WHERE imei = $1',
             [imei]
         );
 
@@ -141,7 +146,8 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'Camion no encontrado' });
         }
 
-        if (camionResultado.rows[0].owner_id !== req.dueno.owner_id) {
+        const { owner_id: ownerId, ficha } = camionResultado.rows[0];
+        if (ownerId !== req.dueno.owner_id) {
             return res.status(403).json({ error: 'Este vehículo no te pertenece' });
         }
 
@@ -150,13 +156,79 @@ app.post('/api/apagar-camion', verificarToken, async (req, res) => {
             return res.status(404).json({ error: 'El vehículo no está conectado ahora mismo. Intenta cuando tenga señal.' });
         }
 
-        const comando = construirComandoGT06('DYD,000000#', proximoSerial());
+        const comando = construirComandoGT06(COMANDO_GT06_CORTAR_MOTOR, proximoSerial());
         socketGPS.write(comando);
 
+        // El bloqueo dura hasta que el dueño reactive desde la app (ver
+        // /api/encender-camion): mientras este en true, cualquier intento de
+        // arranque por llave o reconexion del GPS reenvia el corte.
+        await pool.query(
+            'UPDATE camiones SET bloqueado_remoto = true, motor_encendido = false WHERE imei = $1',
+            [imei]
+        );
+        detenerRecordatorioMotor(imei);
+
         console.log(`🔴 Comando de apagado enviado al camion IMEI: ${imei} (dueño: ${req.dueno.owner_id})`);
+        await dispararAlerta(
+            ownerId,
+            imei,
+            'apagado',
+            `Unidad ${ficha} fue apagada y bloqueada remotamente desde la app.`,
+            { origen: 'remoto' }
+        );
+
         res.json({ ok: true, mensaje: 'Comando de apagado enviado al camion' });
     } catch (error) {
         console.log(`❌ Error enviando comando de apagado: ${error.message}`);
+        res.status(500).json({ error: 'Error de servidor enviando el comando' });
+    }
+});
+
+app.post('/api/encender-camion', verificarToken, async (req, res) => {
+    const { imei } = req.body;
+    if (!imei) {
+        return res.status(400).json({ error: 'Falta el IMEI del camion' });
+    }
+
+    try {
+        const camionResultado = await pool.query(
+            'SELECT owner_id, ficha FROM camiones WHERE imei = $1',
+            [imei]
+        );
+
+        if (camionResultado.rows.length === 0) {
+            return res.status(404).json({ error: 'Camion no encontrado' });
+        }
+
+        const { owner_id: ownerId, ficha } = camionResultado.rows[0];
+        if (ownerId !== req.dueno.owner_id) {
+            return res.status(403).json({ error: 'Este vehículo no te pertenece' });
+        }
+
+        const socketGPS = conexionesGT06.get(imei);
+        if (!socketGPS) {
+            return res.status(404).json({ error: 'El vehículo no está conectado ahora mismo. Intenta cuando tenga señal.' });
+        }
+
+        const comando = construirComandoGT06(COMANDO_GT06_RESTAURAR_MOTOR, proximoSerial());
+        socketGPS.write(comando);
+
+        // A partir de aqui la llave vuelve a funcionar sin restricciones,
+        // hasta el proximo apagado remoto.
+        await pool.query('UPDATE camiones SET bloqueado_remoto = false WHERE imei = $1', [imei]);
+
+        console.log(`🟢 Comando de reactivacion enviado al camion IMEI: ${imei} (dueño: ${req.dueno.owner_id})`);
+        await dispararAlerta(
+            ownerId,
+            imei,
+            'desbloqueo',
+            `Unidad ${ficha} fue reactivada desde la app. La llave ya funciona con normalidad.`,
+            { origen: 'remoto' }
+        );
+
+        res.json({ ok: true, mensaje: 'Comando de reactivacion enviado al camion' });
+    } catch (error) {
+        console.log(`❌ Error enviando comando de reactivacion: ${error.message}`);
         res.status(500).json({ error: 'Error de servidor enviando el comando' });
     }
 });
@@ -169,6 +241,7 @@ function tituloPorTipoAlerta(tipo) {
         case 'ruta': return '🚨 Fuera de ruta';
         case 'encendido': return '🔧 Motor encendido';
         case 'apagado': return '🔧 Motor apagado';
+        case 'desbloqueo': return '🔓 Vehículo reactivado';
         default: return '🚨 Alerta de flota';
     }
 }
@@ -213,6 +286,126 @@ async function dispararAlerta(ownerId, imei, tipo, mensaje, datosExtra) {
         await enviarPush(ownerId, tituloPorTipoAlerta(tipo), mensaje, { tipo, imei, ...datosExtra });
     } catch (error) {
         console.log(`❌ Error disparando alerta: ${error.message}`);
+    }
+}
+
+// ==================== RECORDATORIO DE MOTOR ENCENDIDO (cada 10 min) ====================
+// Mientras el motor siga encendido, recuerda al dueño con un sonido leve +
+// push cada 10 min, hasta que se apague. No pasa por dispararAlerta a
+// proposito: es un recordatorio recurrente, no un evento puntual, y
+// guardarlo en la tabla "alertas" llenaria el historial de filas repetidas
+// para un mismo encendido largo.
+const RECORDATORIO_MOTOR_INTERVALO_MS = 10 * 60 * 1000;
+const timersRecordatorioMotor = new Map(); // imei -> intervalId
+
+function iniciarRecordatorioMotor(ownerId, imei, ficha) {
+    detenerRecordatorioMotor(imei);
+    const intervalId = setInterval(() => {
+        const mensaje = `Unidad ${ficha} sigue con el motor encendido.`;
+        io.to(ownerId).emit('alerta', { imei, tipo: 'recordatorio_motor', mensaje, fecha: new Date().toISOString() });
+        enviarPush(ownerId, '🔔 Motor encendido', mensaje, { tipo: 'recordatorio_motor', imei });
+    }, RECORDATORIO_MOTOR_INTERVALO_MS);
+    timersRecordatorioMotor.set(imei, intervalId);
+}
+
+function detenerRecordatorioMotor(imei) {
+    const intervalId = timersRecordatorioMotor.get(imei);
+    if (intervalId) {
+        clearInterval(intervalId);
+        timersRecordatorioMotor.delete(imei);
+    }
+}
+
+// ==================== DETECCION DE IGNICION (ACC) VIA GT06 0x13 ====================
+// NOTA IMPORTANTE: el bit exacto de ACC dentro del "Terminal Information
+// Content" (primer byte del cuerpo del paquete 0x13) varia segun el clon de
+// GT06. El valor de abajo (bit 1) es el mas comun en la documentacion
+// publica del protocolo, pero TODAVIA NO SE HA CONFIRMADO contra este
+// hardware especifico. Para validarlo: prender/apagar la llave con el GPS
+// conectado, comparar los "cuerpoHex" logueados en cada estado, y ajustar
+// esta mascara si el bit que cambia no es este.
+const MASCARA_BIT_ACC = 0x02;
+
+function interpretarEstadoTerminal(cuerpoHex) {
+    if (!cuerpoHex || cuerpoHex.length < 2) return null;
+    const byteEstado = parseInt(cuerpoHex.substring(0, 2), 16);
+    if (Number.isNaN(byteEstado)) return null;
+    return (byteEstado & MASCARA_BIT_ACC) !== 0;
+}
+
+// Se llama con cada heartbeat (0x13). Compara contra el ultimo estado
+// conocido en BD y, si cambio, dispara la alerta de encendido/apagado y
+// arranca/detiene el recordatorio. Si el vehiculo esta bloqueado
+// remotamente y alguien intenta arrancarlo con llave, refuerza el corte
+// en vez de tratarlo como un encendido legitimo.
+async function procesarCambioDeIgnicion(imei, cuerpoHex) {
+    const motorEncendidoAhora = interpretarEstadoTerminal(cuerpoHex);
+    if (motorEncendidoAhora === null) return;
+
+    try {
+        const resultado = await pool.query(
+            'SELECT owner_id, ficha, motor_encendido, bloqueado_remoto FROM camiones WHERE imei = $1',
+            [imei]
+        );
+        if (resultado.rows.length === 0) return;
+
+        const {
+            owner_id: ownerId,
+            ficha,
+            motor_encendido: motorEncendidoAntes,
+            bloqueado_remoto: bloqueado,
+        } = resultado.rows[0];
+
+        if (bloqueado && motorEncendidoAhora) {
+            const socketGPS = conexionesGT06.get(imei);
+            if (socketGPS) {
+                socketGPS.write(construirComandoGT06(COMANDO_GT06_CORTAR_MOTOR, proximoSerial()));
+                console.log(`🔒 Intento de encendido con llave bloqueado (remoto) en IMEI ${imei}, reforzando corte`);
+            }
+            return;
+        }
+
+        if (motorEncendidoAntes === motorEncendidoAhora) return;
+
+        await pool.query('UPDATE camiones SET motor_encendido = $1 WHERE imei = $2', [motorEncendidoAhora, imei]);
+
+        if (motorEncendidoAhora) {
+            await dispararAlerta(ownerId, imei, 'encendido', `Unidad ${ficha} encendió el motor.`, {});
+            iniciarRecordatorioMotor(ownerId, imei, ficha);
+        } else {
+            await dispararAlerta(ownerId, imei, 'apagado', `Unidad ${ficha} apagó el motor.`, {});
+            detenerRecordatorioMotor(imei);
+        }
+    } catch (error) {
+        console.log(`❌ Error procesando cambio de ignición: ${error.message}`);
+    }
+}
+
+// Al reconectar un GPS que estaba bloqueado remotamente, refuerza el corte
+// por si el dispositivo perdio energia y el rele volvio a su estado normal.
+async function reforzarBloqueoSiAplica(imei, socketGPS) {
+    try {
+        const resultado = await pool.query('SELECT bloqueado_remoto FROM camiones WHERE imei = $1', [imei]);
+        if (resultado.rows.length > 0 && resultado.rows[0].bloqueado_remoto) {
+            socketGPS.write(construirComandoGT06(COMANDO_GT06_CORTAR_MOTOR, proximoSerial()));
+            console.log(`🔒 Reforzando bloqueo remoto tras reconexión, IMEI ${imei}`);
+        }
+    } catch (error) {
+        console.log(`❌ Error reforzando bloqueo remoto: ${error.message}`);
+    }
+}
+
+// ==================== RETENCION DE HISTORIAL DE ALERTAS (2 meses) ====================
+const RETENCION_ALERTAS_INTERVALO_MS = 24 * 60 * 60 * 1000;
+
+async function limpiarAlertasViejas() {
+    try {
+        const resultado = await pool.query(`DELETE FROM alertas WHERE fecha < NOW() - INTERVAL '2 months'`);
+        if (resultado.rowCount > 0) {
+            console.log(`🧹 Limpieza de historial: ${resultado.rowCount} alertas viejas eliminadas`);
+        }
+    } catch (error) {
+        console.log(`❌ Error limpiando historial de alertas: ${error.message}`);
     }
 }
 
@@ -455,13 +648,18 @@ const tcpServerGT06 = net.createServer((socket) => {
                 socket.write(paquete.respuesta);
                 // Guardamos esta conexion para poder mandarle comandos despues (ej. apagado)
                 conexionesGT06.set(paquete.imei, socket);
+                await reforzarBloqueoSiAplica(paquete.imei, socket);
             } else if (paquete.tipo === 'ubicacion' && imeiDeEstaConexion) {
                 console.log(`⚡ [GT06] Ubicación de IMEI: ${imeiDeEstaConexion}`);
                 await actualizarYNotificar(imeiDeEstaConexion, paquete.latitud, paquete.longitud, paquete.velocidad);
             } else if (paquete.tipo === 'heartbeat') {
-                // DIAGNOSTICO TEMPORAL: quitar este log una vez identificado el bit de ACC
+                // DIAGNOSTICO TEMPORAL: dejar este log hasta confirmar la mascara de
+                // MASCARA_BIT_ACC contra hardware real.
                 console.log(`📟 [GT06] Estado (0x13) de IMEI ${imeiDeEstaConexion}, cuerpo hex: ${paquete.cuerpoHex}`);
                 socket.write(paquete.respuesta);
+                if (imeiDeEstaConexion) {
+                    await procesarCambioDeIgnicion(imeiDeEstaConexion, paquete.cuerpoHex);
+                }
             }
         } catch (error) {
             console.log(`❌ Error procesando paquete GT06: ${error.message}`);
@@ -485,3 +683,6 @@ tcpServerGT06.listen(5002, () => {
 server.listen(3000, () => {
     console.log('🌐 API + WEBSOCKETS SEGUROS [Puerto 3000]');
 });
+
+limpiarAlertasViejas();
+setInterval(limpiarAlertasViejas, RETENCION_ALERTAS_INTERVALO_MS);

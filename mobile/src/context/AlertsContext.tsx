@@ -5,7 +5,7 @@ import { beepService } from '../services/beepService';
 import { useAuth } from './AuthContext';
 import { socketService } from '../services/socketService';
 
-type TipoAlerta = 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion' | 'apagado';
+type TipoAlerta = 'ruta' | 'velocidad' | 'aceite' | 'seguro' | 'ignicion' | 'apagado' | 'desbloqueo' | 'recordatorio_motor';
 
 interface AlertContextType {
   activeAlert: { type: string; message: string; infinite: boolean } | null;
@@ -14,12 +14,52 @@ interface AlertContextType {
 }
 
 // Mapea el "tipo" que manda el servidor (server.js: dispararAlerta) al tipo de
-// alerta local. Un solo listener global cubre las 4 alertas del plan unificado.
+// alerta local. Un solo listener global cubre las alertas del plan unificado.
+// "recordatorio_motor" NO pasa por aqui: no dispara el banner de alerta
+// (seria muy invasivo cada 10 min), solo reproduce el sonido leve.
 const TIPO_SERVIDOR_A_ALERTA: Record<string, TipoAlerta> = {
   ruta: 'ruta',
   velocidad: 'velocidad',
   encendido: 'ignicion',
   apagado: 'apagado',
+  desbloqueo: 'desbloqueo',
+};
+
+// Intensidad del sonido y patron de repeticion por tipo de alerta, segun el
+// diseño acordado: encendido = 3 pines una vez, apagado/desbloqueo = normal
+// una vez, velocidad/ruta = fuerte hasta que se descarte, recordatorio del
+// motor = leve una vez (se repite solo porque el servidor lo vuelve a
+// emitir cada 10 min, no porque el cliente lo loopee).
+type Intensidad = 'leve' | 'normal' | 'fuerte';
+type Patron = 'una-vez' | 'triple' | 'loop';
+
+const CONFIG_SONIDO: Record<TipoAlerta, { intensidad: Intensidad; patron: Patron }> = {
+  ruta: { intensidad: 'fuerte', patron: 'loop' },
+  velocidad: { intensidad: 'fuerte', patron: 'loop' },
+  aceite: { intensidad: 'normal', patron: 'una-vez' },
+  seguro: { intensidad: 'leve', patron: 'una-vez' },
+  ignicion: { intensidad: 'normal', patron: 'triple' },
+  apagado: { intensidad: 'normal', patron: 'una-vez' },
+  desbloqueo: { intensidad: 'normal', patron: 'una-vez' },
+  recordatorio_motor: { intensidad: 'leve', patron: 'una-vez' },
+};
+
+const FRECUENCIA_POR_INTENSIDAD: Record<Intensidad, number> = {
+  leve: 500,
+  normal: 650,
+  fuerte: 850,
+};
+
+const VOLUMEN_POR_INTENSIDAD: Record<Intensidad, number> = {
+  leve: 0.35,
+  normal: 0.7,
+  fuerte: 1.0,
+};
+
+const VIBRACION_POR_INTENSIDAD: Record<Intensidad, number[]> = {
+  fuerte: [0, 100, 100, 100, 100, 100],
+  normal: [0, 50, 100, 50],
+  leve: [0, 30],
 };
 
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
@@ -45,88 +85,46 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     initAudio();
   }, []);
 
-  // Función para reproducir la sirena o los pitidos de emergencia
-  async function playAlarmSound(isInfinite: boolean, durationMs?: number, alertType?: string) {
+  // Reproduce el sonido correspondiente al tipo de alerta, usando la
+  // intensidad (leve/normal/fuerte) y el patrón (una-vez/triple/loop)
+  // definidos en CONFIG_SONIDO.
+  async function playAlarmSound(type: TipoAlerta) {
+    const { intensidad, patron } = CONFIG_SONIDO[type];
+    const frecuencia = FRECUENCIA_POR_INTENSIDAD[intensidad];
+    const volumen = VOLUMEN_POR_INTENSIDAD[intensidad];
+
     try {
-      // Descargar sonido anterior si existe
       if (soundInstance) {
         await soundInstance.unloadAsync().catch(() => {});
+        setSoundInstance(null);
       }
 
-      // Reproducir vibración inmediatamente como feedback
-      const vibrationPattern = alertType === 'velocidad' || alertType === 'ruta' 
-        ? [0, 100, 100, 100, 100, 100] // Patrón más agresivo para alertas críticas
-        : [0, 50, 100, 50]; // Patrón normal
-
-      console.log("🎯 Iniciando vibración con patrón:", vibrationPattern);
-      
-      try {
-        Vibration.vibrate(vibrationPattern);
-        console.log("✓ Vibración ejecutada");
-      } catch (vibError) {
-        console.log("⚠️ Error en vibración:", vibError);
-      }
-
-      // Intentar cargar archivo de sonido
-      let sound: Audio.Sound | null = null;
-      try {
-        const soundObj = new Audio.Sound();
-        await soundObj.loadAsync(require('../assets/alarma.mp3'));
-        sound = soundObj;
-        console.log("✓ Sonido alarma.mp3 cargado");
-      } catch (loadError) {
-        console.log("⚠️ No se pudo cargar alarma.mp3, usando beep generado");
-
-        if (isInfinite) {
-          const beepFrequency = alertType === 'velocidad' || alertType === 'ruta' ? 800 : 600;
-          await beepService.playLoopingBeep(beepFrequency, 700);
-        } else {
-          const beepFrequency = alertType === 'velocidad' || alertType === 'ruta' ? 800 : 600;
-          const repeatCount = 2;
-          const beepDuration = 500;
-          const pauseBetween = 200;
-
-          await beepService.playRepeatingBeep(beepFrequency, beepDuration, repeatCount, pauseBetween);
-        }
-      }
-
-      if (sound) {
-        setSoundInstance(sound);
-        await sound.setVolumeAsync(1.0);
-
+      if (patron === 'loop') {
+        // Para las alertas que suenan hasta que el usuario las descarte,
+        // intentamos primero el archivo real de sirena; si no existe,
+        // caemos al beep generado en loop.
         try {
-          if (isInfinite) {
-            await sound.setIsLoopingAsync(true);
-          }
-          await sound.playAsync();
-          console.log("✓ Sonido reproduciendo");
-        } catch (playError) {
-          console.log("⚠️ Error reproduciendo sonido:", playError);
+          const soundObj = new Audio.Sound();
+          await soundObj.loadAsync(require('../assets/alarma.mp3'));
+          setSoundInstance(soundObj);
+          await soundObj.setVolumeAsync(volumen);
+          await soundObj.setIsLoopingAsync(true);
+          await soundObj.playAsync();
+          console.log("✓ Sonido alarma.mp3 reproduciendo en loop");
+          return;
+        } catch (loadError) {
+          console.log("⚠️ No se pudo cargar alarma.mp3, usando beep continuo generado");
         }
+        await beepService.playLoopingBeep(frecuencia, 700, volumen);
+        return;
+      }
 
-        // Si tiene una duración fija (alerta temporal)
-        if (!isInfinite && durationMs) {
-          setTimeout(async () => {
-            try {
-              if (sound) {
-                await sound.stopAsync().catch(() => {});
-                await sound.unloadAsync().catch(() => {});
-                setSoundInstance(null);
-              }
-            } catch (stopError) {
-              console.log("⚠️ Error deteniendo sonido programado:", stopError);
-            }
-          }, durationMs);
-        }
-      }
+      // Patrones cortos (una-vez / triple): siempre con el beep generado,
+      // para controlar con precisión cuántas veces suena.
+      const repeticiones = patron === 'triple' ? 3 : 1;
+      await beepService.playRepeatingBeep(frecuencia, 500, repeticiones, 250, volumen);
     } catch (error) {
-      console.log("❌ Error general con sonido/vibración:", error);
-      try {
-        Vibration.vibrate([0, 100, 50, 100]);
-        console.log("✓ Vibración fallback ejecutada");
-      } catch (e) {
-        console.log("❌ Fallo también el fallback de vibración:", e);
-      }
+      console.log("❌ Error general con sonido:", error);
     }
   }
 
@@ -141,6 +139,14 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!socket) return;
 
     const manejarAlertaDelServidor = (payload: { tipo: string; mensaje: string }) => {
+      // El recordatorio de motor encendido NO abre el banner de alerta (se
+      // repite cada 10 min y seria muy invasivo pedir "Apagar Alarma" cada
+      // vez) - solo reproduce el sonido leve.
+      if (payload.tipo === 'recordatorio_motor') {
+        playAlarmSound('recordatorio_motor');
+        return;
+      }
+
       const tipoAlerta = TIPO_SERVIDOR_A_ALERTA[payload.tipo];
       if (tipoAlerta) {
         triggerAlert(tipoAlerta, undefined, payload.mensaje);
@@ -153,45 +159,35 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, [user]);
 
-  // Se tipó la entrada estrictamente para cumplir con AlertContextType
   const triggerAlert = (type: TipoAlerta, kmFaltantes?: number, mensajePersonalizado?: string) => {
     let message = "";
-    let infinite = false;
-    let duration = 0;
 
     switch (type) {
       case 'ruta':
         message = "¡ALERTA CRÍTICA! Camión fuera de ruta asignada.";
-        infinite = true;
         break;
       case 'velocidad':
         message = "¡ALERTA DE VELOCIDAD! Unidad excedió los 80 KPH.";
-        infinite = true;
         break;
       case 'aceite':
-        if (kmFaltantes === 0) {
-          message = "¡MANTENIMIENTO CRÍTICO! Cambio de aceite obligatorio YA.";
-          infinite = true;
-        } else {
-          message = `Aviso: Faltan ${kmFaltantes} KM para el cambio de aceite.`;
-          infinite = false;
-          duration = 10000; // 10 segundos
-        }
+        message = kmFaltantes === 0
+          ? "¡MANTENIMIENTO CRÍTICO! Cambio de aceite obligatorio YA."
+          : `Aviso: Faltan ${kmFaltantes} KM para el cambio de aceite.`;
         break;
       case 'seguro':
         message = "Recordatorio: El seguro del camión vence en 1 semana.";
-        infinite = false;
-        duration = 8000;
         break;
       case 'ignicion':
         message = "Notificación: Motor encendido.";
-        infinite = false;
-        duration = 4000; // 4 segundos exactos
         break;
       case 'apagado':
         message = "Notificación: Motor apagado.";
-        infinite = false;
-        duration = 4000;
+        break;
+      case 'desbloqueo':
+        message = "Notificación: Vehículo reactivado.";
+        break;
+      case 'recordatorio_motor':
+        message = "Recordatorio: el motor sigue encendido.";
         break;
     }
 
@@ -199,24 +195,21 @@ export const AlertProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       message = mensajePersonalizado;
     }
 
+    const { intensidad, patron } = CONFIG_SONIDO[type];
+    const infinite = patron === 'loop';
+
     console.log(`🔔 ALERTA DISPARADA: ${type} - ${message}`);
 
     setActiveAlert({ type, message, infinite });
-    
-    // Ejecutar vibración de forma segura
-    const vibrationPattern = type === 'velocidad' || type === 'ruta' 
-      ? [0, 100, 100, 100, 100, 100]
-      : [0, 50, 100, 50];
-    
+
     try {
-      Vibration.vibrate(vibrationPattern);
+      Vibration.vibrate(VIBRACION_POR_INTENSIDAD[intensidad]);
       console.log("✓ Vibración iniciada");
     } catch (e) {
       console.log("✗ Error en vibración:", e);
     }
-    
-    // Lanzar sonido
-    playAlarmSound(infinite, duration, type);
+
+    playAlarmSound(type);
   };
 
   const dismissAlert = async () => {

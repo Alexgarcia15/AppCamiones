@@ -22,6 +22,7 @@ export default function LiveMapScreen() {
 
     const [tieneSenal, setTieneSenal] = useState(false);
     const [apagando, setApagando] = useState(false);
+    const [bloqueado, setBloqueado] = useState<boolean>(!!camionParam?.bloqueado_remoto);
 
     // Handler nombrado, para poder quitar exactamente ESTE listener al salir
     const manejarActualizacion = useCallback((datos: any) => {
@@ -80,9 +81,46 @@ export default function LiveMapScreen() {
             });
             const data = await res.json();
             if (res.ok) {
-                Alert.alert('Comando enviado', 'La orden de apagado fue enviada al camión.');
+                setBloqueado(true);
+                Alert.alert('Comando enviado', 'La orden de apagado fue enviada al camión. Quedará bloqueado hasta que lo reactives desde la app.');
             } else {
                 Alert.alert('No se pudo apagar', data.error || 'Intenta de nuevo en unos segundos.');
+            }
+        } catch (error) {
+            Alert.alert('Error de conexión', 'No se pudo contactar al servidor.');
+        }
+        setApagando(false);
+    };
+
+    const confirmarActivacion = () => {
+        Alert.alert(
+            'Reactivar el Vehículo',
+            '¿Seguro que quieres reactivar el motor? A partir de ahora podrá encenderse y apagarse con la llave normalmente.',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Sí, reactivar', onPress: ejecutarActivacion },
+            ]
+        );
+    };
+
+    const ejecutarActivacion = async () => {
+        if (!user?.token) return;
+        setApagando(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/encender-camion`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${user.token}`,
+                },
+                body: JSON.stringify({ imei }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setBloqueado(false);
+                Alert.alert('Comando enviado', 'El camión fue reactivado y ya puede encenderse con llave.');
+            } else {
+                Alert.alert('No se pudo reactivar', data.error || 'Intenta de nuevo en unos segundos.');
             }
         } catch (error) {
             Alert.alert('Error de conexión', 'No se pudo contactar al servidor.');
@@ -118,16 +156,30 @@ export default function LiveMapScreen() {
                 <Text style={styles.backButtonText}>⬅ Volver al Listado</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-                style={[styles.apagarButton, (!camionDetenido || apagando) && styles.apagarButtonDisabled]}
-                onPress={confirmarApagado}
-                disabled={!camionDetenido || apagando}
-            >
-                <Text style={styles.apagarButtonText}>
-                    {apagando ? 'ENVIANDO...' : 'APAGAR'}
-                </Text>
-            </TouchableOpacity>
-            {!camionDetenido && (
+            {bloqueado ? (
+                <TouchableOpacity
+                    style={[styles.apagarButton, styles.activarButton, apagando && styles.apagarButtonDisabled]}
+                    onPress={confirmarActivacion}
+                    disabled={apagando}
+                >
+                    <Text style={[styles.apagarButtonText, styles.activarButtonText]}>
+                        {apagando ? 'ENVIANDO...' : 'REACTIVAR'}
+                    </Text>
+                </TouchableOpacity>
+            ) : (
+                <TouchableOpacity
+                    style={[styles.apagarButton, (!camionDetenido || apagando) && styles.apagarButtonDisabled]}
+                    onPress={confirmarApagado}
+                    disabled={!camionDetenido || apagando}
+                >
+                    <Text style={styles.apagarButtonText}>
+                        {apagando ? 'ENVIANDO...' : 'APAGAR'}
+                    </Text>
+                </TouchableOpacity>
+            )}
+            {bloqueado ? (
+                <Text style={styles.avisoText}>Vehículo bloqueado remotamente</Text>
+            ) : !camionDetenido && (
                 <Text style={styles.avisoText}>Solo se puede apagar con el camión detenido</Text>
             )}
 
@@ -187,6 +239,12 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         fontSize: 14,
         letterSpacing: 0.5,
+    },
+    activarButton: {
+        borderColor: '#22c55e',
+    },
+    activarButtonText: {
+        color: '#22c55e',
     },
     avisoText: {
         position: 'absolute',
